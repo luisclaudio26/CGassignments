@@ -21,9 +21,9 @@ int main(int argc, char** args)
 
   //------- geometry setup -------
   Triangle tri;
-  tri.v[0] = (Vertex){-0.5, -0.5, 1.0, 1.0, 0.0, 0.0};
-  tri.v[1] = (Vertex){+0.5, -0.5, 1.0, 0.0, 1.0, 0.0};
-  tri.v[2] = (Vertex){0.0, +0.5, 1.0, 0.0, 0.0, 1.0};
+  tri.v[0] = (Vertex){-0.5, -0.5, 0.0, 1.0, 0.0, 0.0};
+  tri.v[1] = (Vertex){+0.5, -0.5, 0.0, 0.0, 1.0, 0.0};
+  tri.v[2] = (Vertex){0.0, +0.5, 0.0, 0.0, 0.0, 1.0};
 
   GLuint VAO, VBO;
   glGenVertexArrays(1, &VAO); GL_OK
@@ -38,9 +38,28 @@ int main(int argc, char** args)
                 (GLvoid*)&tri,
                 GL_STATIC_DRAW); GL_OK
 
-  //define attributes
-  //glVertexAttribPointer
+  printf("Uploading %d bytes\n", sizeof(tri));
 
+  //define attributes
+  GLuint pos = glGetAttribLocation(shader, "pos"); GL_OK
+  glEnableVertexAttribArray(pos); GL_OK
+  glVertexAttribPointer(pos,
+                        3,
+                        GL_FLOAT,
+                        GL_FALSE,
+                        sizeof(Vertex),
+                        (GLvoid*)0); GL_OK
+
+  GLuint color = glGetAttribLocation(shader, "color"); GL_OK
+  glEnableVertexAttribArray(color); GL_OK
+  glVertexAttribPointer(color,
+                        3,
+                        GL_FLOAT,
+                        GL_FALSE,
+                        sizeof(Vertex),
+                        (GLvoid*)(3*sizeof(float))); GL_OK
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0); glBindVertexArray(0);
 
 	//------- main loop --------
 	do
@@ -51,6 +70,13 @@ int main(int argc, char** args)
 
 		//Clear screen -> this function also clears stencil and depth buffer
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    //draw our cute triangle
+    glUseProgram(shader);
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
+    glUseProgram(0);
 
 		//Swap buffer and query events
 		glfwSwapBuffers(window);
