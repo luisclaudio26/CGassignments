@@ -2,7 +2,7 @@
 #include <GLFW/glfw3.h>
 
 #include "../include/shaderloader.h"
-#include "../include/primitives.h"
+#include "mesh.h"
 
 #define GL_OK { GLenum err; \
                 if( (err = glGetError()) != GL_NO_ERROR) \
@@ -20,10 +20,13 @@ int main(int argc, char** args)
   GLuint shader = ShaderLoader::load("../shaders/passthrough");
 
   //------- geometry setup -------
+  Mesh mesh("../data/cube.in");
+
+
   Triangle tri;
-  tri.v[0] = (Vertex){-0.5, -0.5, 0.0, 1.0, 0.0, 0.0};
-  tri.v[1] = (Vertex){+0.5, -0.5, 0.0, 0.0, 1.0, 0.0};
-  tri.v[2] = (Vertex){0.0, +0.5, 0.0, 0.0, 0.0, 1.0};
+  tri.v[0] = (Vertex){Vec3(-0.5, -0.5, 0.0), Vec3(1.0, 0.0, 0.0)};
+  tri.v[1] = (Vertex){Vec3(+0.5, -0.5, 0.0), Vec3(0.0, 1.0, 0.0)};
+  tri.v[2] = (Vertex){Vec3(0.0, +0.5, 0.0), Vec3(0.0, 0.0, 1.0)};
 
   GLuint VAO, VBO;
   glGenVertexArrays(1, &VAO); GL_OK
