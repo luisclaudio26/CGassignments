@@ -1,8 +1,10 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "../include/shaderloader.h"
-#include "mesh.h"
+#include "../include/mesh.h"
 
 #define GL_OK { GLenum err; \
                 if( (err = glGetError()) != GL_NO_ERROR) \
@@ -21,48 +23,17 @@ int main(int argc, char** args)
 
   //------- geometry setup -------
   Mesh mesh("../data/cube.in");
+  mesh.upload_to_gpu(shader);
 
+  glm::mat4 model, view, proj;
+  model = glm::mat4(1.0f);
+  view = glm::lookAt( Vec3(0.0f, 0.0f, 0.0f),
+                      Vec3(0.0f, 0.0f, -1.0f),
+                      Vec3(0.0f, 1.0f, 0.0f) );
+  proj = glm::perspective(60.0f, 1.6666f, 0.5f, 10.0f);
 
-  Triangle tri;
-  tri.v[0] = (Vertex){Vec3(-0.5, -0.5, 0.0), Vec3(1.0, 0.0, 0.0)};
-  tri.v[1] = (Vertex){Vec3(+0.5, -0.5, 0.0), Vec3(0.0, 1.0, 0.0)};
-  tri.v[2] = (Vertex){Vec3(0.0, +0.5, 0.0), Vec3(0.0, 0.0, 1.0)};
-
-  GLuint VAO, VBO;
-  glGenVertexArrays(1, &VAO); GL_OK
-  glGenBuffers(1, &VBO); GL_OK
-
-  //upload data
-  glBindVertexArray(VAO); GL_OK
-  glBindBuffer(GL_ARRAY_BUFFER, VBO); GL_OK
-
-  glBufferData(GL_ARRAY_BUFFER,
-                sizeof(tri),
-                (GLvoid*)&tri,
-                GL_STATIC_DRAW); GL_OK
-
-  printf("Uploading %d bytes\n", sizeof(tri));
-
-  //define attributes
-  GLuint pos = glGetAttribLocation(shader, "pos"); GL_OK
-  glEnableVertexAttribArray(pos); GL_OK
-  glVertexAttribPointer(pos,
-                        3,
-                        GL_FLOAT,
-                        GL_FALSE,
-                        sizeof(Vertex),
-                        (GLvoid*)0); GL_OK
-
-  GLuint color = glGetAttribLocation(shader, "color"); GL_OK
-  glEnableVertexAttribArray(color); GL_OK
-  glVertexAttribPointer(color,
-                        3,
-                        GL_FLOAT,
-                        GL_FALSE,
-                        sizeof(Vertex),
-                        (GLvoid*)(3*sizeof(float))); GL_OK
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0); glBindVertexArray(0);
+  glm::mat4 mvp = proj*view*model;
+  GLuint mvp_id = glGetUniformLocation(shader, "mvp"); GL_OK
 
 	//------- main loop --------
 	do
@@ -74,12 +45,12 @@ int main(int argc, char** args)
 		//Clear screen -> this function also clears stencil and depth buffer
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    //draw our cute triangle
+    //upload Model-View-Project matrix
     glUseProgram(shader);
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glBindVertexArray(0);
-    glUseProgram(0);
+    glUniformMatrix4fv(mvp_id, 1, GL_FALSE, glm::value_ptr(mvp) ); GL_OK
+
+    //draw our cute triangle
+    mesh.draw();
 
 		//Swap buffer and query events
 		glfwSwapBuffers(window);
@@ -109,7 +80,7 @@ GLFWwindow* setup()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//Create window and set it as the context
-	GLFWwindow *window = glfwCreateWindow(800, 600, "AlmostGL", NULL, NULL);
+	GLFWwindow *window = glfwCreateWindow(960, 540, "AlmostGL", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
 	//Initialize GLEW.
