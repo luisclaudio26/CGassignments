@@ -7,22 +7,45 @@
 #include <nanogui/glutil.h>
 #include <nanogui/screen.h>
 #include <nanogui/window.h>
+#include <nanogui/layout.h>
+#include <nanogui/button.h>
+#include <nanogui/slider.h>
 
-//#include "../include/shaderloader.h"
-//#include "../include/mesh.h"
+#include "../include/mesh.h"
 
 class ExampleApp : public nanogui::Screen
 {
+private:
+  nanogui::GLShader mShader;
+
 public:
   ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
   {
+    //----------------------------------
+    //----------- GUI setup ------------
+    //----------------------------------
     using namespace nanogui;
 
-    Window *window = new Window(this, "Demo");
+    Window *window = new Window(this, "General options");
     window->setPosition(Vector2i(0, 0));
-    //window->setLayout(new GroupLayout());
+    window->setLayout(new GroupLayout());
+
+    Button *reset_view = new Button(window, "Reset view");
+    reset_view->setCallback( [] { printf("Reset\n"); } );
+    reset_view->setTooltip("Reset view so the object will be centered again");
+
+    Slider *near_plane = new Slider(window);
+    near_plane->setFixedWidth(100);
+    near_plane->setFinalCallback( [](float val) { printf("Final value: %f\n", val); } );
 
     performLayout();
+
+    //--------------------------------------
+    //----------- Shader options -----------
+    //--------------------------------------
+    mShader.initFromFiles("passthrough",
+                          "../shaders/passthrough.vs",
+                          "../shaders/passthrough.fs");
   }
 
   virtual void draw(NVGcontext *ctx)
@@ -33,6 +56,8 @@ public:
 
 int main(int argc, char** args)
 {
+  Mesh mesh("../data/cube.in");
+
   nanogui::init();
 
   nanogui::ref<ExampleApp> app = new ExampleApp;

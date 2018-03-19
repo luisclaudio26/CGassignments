@@ -15,10 +15,10 @@ uniform mat4 mvp;
 
 void main()
 {
-  gl_Position = mvp * vec4(pos, 1.0f);
+  gl_Position = mvp * vec4(pos, 1.0);
 
   //propagate variables
-  f_normal = (inverse(transpose(mvp))*vec4(normal, 0.0f)).xyz;
+  f_normal = (inverse(transpose(mvp))*vec4(normal, 0.0)).xyz;
   f_amb = amb; f_diff = diff; f_spec = spec;
   f_shininess = shininess;
 }
