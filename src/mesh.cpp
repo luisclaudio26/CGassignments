@@ -26,7 +26,6 @@ static void define_float_attrib(GLuint shader, const char* name,
 //-----------------------------------------
 //------------- FROM MESH.H ---------------
 //-----------------------------------------
-
 void Mesh::draw()
 {
   glUseProgram(this->shader); GL_OK
