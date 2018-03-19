@@ -21,8 +21,7 @@ private:
   Mesh mMesh;
 
   glm::vec3 mEye, mLookDir, mUp;
-  glm::mat4 mProj;
-  float step;
+  float mNear, mFar, mStep;
 
 public:
   ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
@@ -42,7 +41,13 @@ public:
 
     Slider *near_plane = new Slider(window);
     near_plane->setFixedWidth(100);
-    near_plane->setFinalCallback( [](float val) { printf("Final value: %f\n", val); } );
+    near_plane->setTooltip("Set near Z plane to any value between 1 and 10");
+    near_plane->setCallback( [this](float val) { mNear = 1.0f + val * (10.0f - 1.0f); } );
+
+    Slider *far_plane = new Slider(window);
+    far_plane->setFixedWidth(100);
+    far_plane->setTooltip("Set near Z plane to any value between 10 and 40");
+    far_plane->setCallback( [this](float val) { mFar = 10.0f + val * (40.0f - 10.0f); } );
 
     performLayout();
 
@@ -54,8 +59,8 @@ public:
     mEye = glm::vec3(0.0f, 0.0f, 1.0f);
     mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
     mUp = glm::vec3(0.0f, 1.0f, 0.0f);
-    mProj = glm::perspective(84.0f, 1.6666f, 1.0f, 10.0f);
-    step = 0.05f;
+    mNear = 1.0f; mFar = 10.0f;
+    mStep = 0.05f;
 
     //--------------------------------------
     //----------- Shader options -----------
@@ -84,28 +89,28 @@ public:
     //camera movement
     if(key == GLFW_KEY_A && action == GLFW_REPEAT) {
       glm::vec3 left = glm::cross(mUp, mLookDir);
-      mEye += left * step;
+      mEye += left * mStep;
       return true;
     }
     if(key == GLFW_KEY_D && action == GLFW_REPEAT) {
       glm::vec3 left = -glm::cross(mUp, mLookDir);
-      mEye += left * step;
+      mEye += left * mStep;
       return true;
     }
     if( key == GLFW_KEY_W && action == GLFW_REPEAT ) {
-      mEye += mLookDir * step;
+      mEye += mLookDir * mStep;
       return true;
     }
     if( key == GLFW_KEY_S && action == GLFW_REPEAT ) {
-      mEye += mLookDir * (-step);
+      mEye += mLookDir * (-mStep);
       return true;
     }
     if( key == GLFW_KEY_R && action == GLFW_REPEAT ) {
-      mEye += mUp * step;
+      mEye += mUp * mStep;
       return true;
     }
     if( key == GLFW_KEY_F && action == GLFW_REPEAT ) {
-      mEye += mUp * (-step);
+      mEye += mUp * (-mStep);
       return true;
     }
 
@@ -116,16 +121,20 @@ public:
   {
     using namespace nanogui;
 
-    //uniform upload
-    glm::mat4 view;
-    view = glm::lookAt(mEye, mEye + mLookDir, mUp);
-    glm::mat4 mvp_ = mProj * view;
+    //uniform uploading
+    glm::mat4 view = glm::lookAt(mEye, mEye + mLookDir, mUp);
+    glm::mat4 proj = glm::perspective(84.0f, 1.6666f, mNear, mFar);
+
+    glm::mat4 mvp_ = proj * view;
     Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_), 4, 4);
 
     //actual drawing
     mShader.bind();
     mShader.setUniform("mvp", mvp);
+
+    glEnable(GL_DEPTH_TEST);
     mShader.drawArray(GL_TRIANGLES, 0, mMesh.mPos.cols());
+    glDisable(GL_DEPTH_TEST);
   }
 };
 
@@ -133,10 +142,12 @@ int main(int argc, char** args)
 {
   nanogui::init();
 
-  nanogui::ref<ExampleApp> app = new ExampleApp;
-  app->drawAll();
-  app->setVisible(true);
-  nanogui::mainloop();
+  /* scoped variables. why this? */ {
+    nanogui::ref<ExampleApp> app = new ExampleApp;
+    app->drawAll();
+    app->setVisible(true);
+    nanogui::mainloop();
+  }
 
   nanogui::shutdown();
 }

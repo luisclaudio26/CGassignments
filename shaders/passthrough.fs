@@ -6,7 +6,7 @@ in float f_shininess;
 in vec3 f_normal;
 
 // fragment final color
-out vec3 color;
+out vec4 color;
 
 void main()
 {
@@ -14,5 +14,5 @@ void main()
   //the variables, causing problems with attribute uploading
   //color = f_shininess*(f_amb + f_diff + f_spec + f_normal);
 
-  color = vec3(0.0, 0.6, 0.0);
+  color = vec4(0.0, 0.6, 0.0, 1.0);
 }
