@@ -1,7 +1,8 @@
-//#include <GL/glew.h>
-//#include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include <iostream>
 
 #include <nanogui/opengl.h>
 #include <nanogui/glutil.h>
@@ -17,6 +18,17 @@ class ExampleApp : public nanogui::Screen
 {
 private:
   nanogui::GLShader mShader;
+  Mesh mMesh;
+
+  /*
+  Eigen::Vector3f mEye, mLookDir, mUp;
+  eye<<0.0f, 0.0f, 1.0f;
+  look_dir<<0.0f, 0.0f,-1.0f;
+  up<<0.0f, 1.0f, 0.0f;
+  */
+
+  glm::vec3 mEye, mLookDir, mUp;
+  glm::mat4 mProj;
 
 public:
   ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
@@ -40,24 +52,54 @@ public:
 
     performLayout();
 
+    //----------------------------------------
+    //----------- Geometry loading -----------
+    //----------------------------------------
+    mMesh.load_file("../data/cube.in");
+
+    mEye = glm::vec3(0.0f, 0.0f, 1.0f);
+    mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
+    mUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    mProj = glm::perspective(84.0f, 1.6666f, 1.0f, 10.0f);
+
     //--------------------------------------
     //----------- Shader options -----------
     //--------------------------------------
     mShader.initFromFiles("passthrough",
                           "../shaders/passthrough.vs",
                           "../shaders/passthrough.fs");
+
+    mShader.bind();
+    mShader.uploadAttrib<Eigen::MatrixXf>("pos", mMesh.mPos);
+    mShader.uploadAttrib<Eigen::MatrixXf>("normal", mMesh.mNormal);
+    mShader.uploadAttrib<Eigen::MatrixXf>("amb", mMesh.mAmb);
+    mShader.uploadAttrib<Eigen::MatrixXf>("diff", mMesh.mDiff);
+    mShader.uploadAttrib<Eigen::MatrixXf>("spec", mMesh.mSpec);
+    mShader.uploadAttrib<Eigen::MatrixXf>("shininess", mMesh.mShininess);
   }
 
   virtual void draw(NVGcontext *ctx)
   {
     Screen::draw(ctx);
   }
+
+  virtual void drawContents()
+  {
+    using namespace nanogui;
+
+    glm::mat4 view;
+    view = glm::lookAt(mEye, mEye + mLookDir, mUp);
+    glm::mat4 mvp_ = mProj * view;
+    Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_), 4, 4);
+
+    mShader.bind();
+    mShader.setUniform("mvp", mvp);
+    mShader.drawArray(GL_TRIANGLES, 0, 36);
+  }
 };
 
 int main(int argc, char** args)
 {
-  Mesh mesh("../data/cube.in");
-
   nanogui::init();
 
   nanogui::ref<ExampleApp> app = new ExampleApp;
