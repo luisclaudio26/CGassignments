@@ -20,15 +20,9 @@ private:
   nanogui::GLShader mShader;
   Mesh mMesh;
 
-  /*
-  Eigen::Vector3f mEye, mLookDir, mUp;
-  eye<<0.0f, 0.0f, 1.0f;
-  look_dir<<0.0f, 0.0f,-1.0f;
-  up<<0.0f, 1.0f, 0.0f;
-  */
-
   glm::vec3 mEye, mLookDir, mUp;
   glm::mat4 mProj;
+  float step;
 
 public:
   ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
@@ -61,6 +55,7 @@ public:
     mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
     mUp = glm::vec3(0.0f, 1.0f, 0.0f);
     mProj = glm::perspective(84.0f, 1.6666f, 1.0f, 10.0f);
+    step = 0.05f;
 
     //--------------------------------------
     //----------- Shader options -----------
@@ -83,18 +78,54 @@ public:
     Screen::draw(ctx);
   }
 
+  virtual bool keyboardEvent(int key, int scancode, int action, int modifiers) {
+    if (Screen::keyboardEvent(key, scancode, action, modifiers)) return true;
+
+    //camera movement
+    if(key == GLFW_KEY_A && action == GLFW_REPEAT) {
+      glm::vec3 left = glm::cross(mUp, mLookDir);
+      mEye += left * step;
+      return true;
+    }
+    if(key == GLFW_KEY_D && action == GLFW_REPEAT) {
+      glm::vec3 left = -glm::cross(mUp, mLookDir);
+      mEye += left * step;
+      return true;
+    }
+    if( key == GLFW_KEY_W && action == GLFW_REPEAT ) {
+      mEye += mLookDir * step;
+      return true;
+    }
+    if( key == GLFW_KEY_S && action == GLFW_REPEAT ) {
+      mEye += mLookDir * (-step);
+      return true;
+    }
+    if( key == GLFW_KEY_R && action == GLFW_REPEAT ) {
+      mEye += mUp * step;
+      return true;
+    }
+    if( key == GLFW_KEY_F && action == GLFW_REPEAT ) {
+      mEye += mUp * (-step);
+      return true;
+    }
+
+    return false;
+  }
+
   virtual void drawContents()
   {
     using namespace nanogui;
 
+    //uniform upload
     glm::mat4 view;
     view = glm::lookAt(mEye, mEye + mLookDir, mUp);
     glm::mat4 mvp_ = mProj * view;
     Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_), 4, 4);
 
+    //actual drawing
     mShader.bind();
     mShader.setUniform("mvp", mvp);
-    mShader.drawArray(GL_TRIANGLES, 0, 36);
+    mShader.drawArray(GL_TRIANGLES, 0, mMesh.mPos.cols());
   }
 };
 
