@@ -11,9 +11,36 @@
 //#include "../include/shaderloader.h"
 //#include "../include/mesh.h"
 
+class ExampleApp : public nanogui::Screen
+{
+public:
+  ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
+  {
+    using namespace nanogui;
+
+    Window *window = new Window(this, "Demo");
+    window->setPosition(Vector2i(0, 0));
+    //window->setLayout(new GroupLayout());
+
+    performLayout();
+  }
+
+  virtual void draw(NVGcontext *ctx)
+  {
+    Screen::draw(ctx);
+  }
+};
+
 int main(int argc, char** args)
 {
   nanogui::init();
+
+  nanogui::ref<ExampleApp> app = new ExampleApp;
+  app->drawAll();
+  app->setVisible(true);
+  nanogui::mainloop();
+
+  nanogui::shutdown();
 }
 
 

@@ -42,5 +42,6 @@ CTestTestfile.cmake
 AlmostGL
 data/
 build/
+3rdparty/
 
 # Datasets
