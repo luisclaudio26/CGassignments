@@ -1,11 +1,31 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+//#include <GL/glew.h>
+//#include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../include/shaderloader.h"
-#include "../include/mesh.h"
+#include <nanogui/opengl.h>
+#include <nanogui/glutil.h>
+#include <nanogui/screen.h>
+#include <nanogui/window.h>
 
+//#include "../include/shaderloader.h"
+//#include "../include/mesh.h"
+
+int main(int argc, char** args)
+{
+  nanogui::init();
+}
+
+
+
+
+
+
+
+
+//-----------------------------------------------------
+
+/*
 #define GL_OK { GLenum err; \
                 if( (err = glGetError()) != GL_NO_ERROR) \
                   printf("Error at %d: %d\n", __LINE__, err); \
@@ -114,3 +134,4 @@ GLFWwindow* setup()
 
 	return window;
 }
+*/

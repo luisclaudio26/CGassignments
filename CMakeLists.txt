@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #Headers
 include_directories(include)
 include_directories(${OPENGL_INCLUDE_DIR})
+include_directories(3rdparty/nanovg/src)
 
 #Source files
 file(GLOB SOURCES "src/*.cpp")
@@ -18,7 +19,7 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(GLEW REQUIRED)
 
-set(LIBS glfw ${GLFW_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
+set(LIBS nanogui glfw ${GLFW_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
 
 add_executable(AlmostGL ${SOURCES})
 target_link_libraries(AlmostGL ${LIBS})
