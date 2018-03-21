@@ -11,6 +11,7 @@
 #include <nanogui/layout.h>
 #include <nanogui/button.h>
 #include <nanogui/slider.h>
+#include <nanogui/colorpicker.h>
 
 #include "../include/mesh.h"
 
@@ -20,8 +21,12 @@ private:
   nanogui::GLShader mShader;
   Mesh mMesh;
 
+  //Camera parameters
   glm::vec3 mEye, mLookDir, mUp;
   float mNear, mFar, mStep;
+
+  //model parameters
+  Eigen::Vector4f mModelColor;
 
 public:
   ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
@@ -49,12 +54,18 @@ public:
     far_plane->setTooltip("Set near Z plane to any value between 10 and 40");
     far_plane->setCallback( [this](float val) { mFar = 10.0f + val * (40.0f - 10.0f); } );
 
+    ColorPicker *color_picker = new ColorPicker(window, mModelColor);
+    color_picker->setTooltip("The color of all triangles in the model.");
+    color_picker->setFinalCallback([this](const Color& c) { this->mModelColor = c; });
+
     performLayout();
 
     //----------------------------------------
     //----------- Geometry loading -----------
     //----------------------------------------
     mMesh.load_file("../data/cube.in");
+
+    mModelColor<<0.0f, 1.0f, 0.0f, 1.0f;
 
     mEye = glm::vec3(0.0f, 0.0f, 1.0f);
     mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -131,6 +142,7 @@ public:
     //actual drawing
     mShader.bind();
     mShader.setUniform("mvp", mvp);
+    mShader.setUniform("model_color", mModelColor);
 
     glEnable(GL_DEPTH_TEST);
     mShader.drawArray(GL_TRIANGLES, 0, mMesh.mPos.cols());
