@@ -28,6 +28,9 @@ private:
   //model parameters
   Eigen::Vector4f mModelColor;
 
+  //general parameters
+  GLenum mFrontFace;
+
 public:
   ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
   {
@@ -51,12 +54,16 @@ public:
 
     Slider *far_plane = new Slider(window);
     far_plane->setFixedWidth(100);
-    far_plane->setTooltip("Set near Z plane to any value between 10 and 40");
-    far_plane->setCallback( [this](float val) { mFar = 10.0f + val * (40.0f - 10.0f); } );
+    far_plane->setTooltip("Set near Z plane to any value between 5 and 15");
+    far_plane->setCallback( [this](float val) { mFar = 5.0f + val * (15.0f - 5.0f); } );
 
     ColorPicker *color_picker = new ColorPicker(window, mModelColor);
-    color_picker->setTooltip("The color of all triangles in the model.");
+    color_picker->setTooltip("Color of the triangles in the model");
     color_picker->setFinalCallback([this](const Color& c) { this->mModelColor = c; });
+
+    Button *toggle_cw_ccw = new Button(window, "Toggle CW/CCW culling");
+    toggle_cw_ccw->setTooltip("This button selects which of the CCW and CW triangles should be culled");
+    toggle_cw_ccw->setCallback( [&] { mFrontFace = (mFrontFace == GL_CW) ? GL_CCW : GL_CW; } );
 
     performLayout();
 
@@ -87,6 +94,9 @@ public:
     mShader.uploadAttrib<Eigen::MatrixXf>("diff", mMesh.mDiff);
     mShader.uploadAttrib<Eigen::MatrixXf>("spec", mMesh.mSpec);
     mShader.uploadAttrib<Eigen::MatrixXf>("shininess", mMesh.mShininess);
+
+    //front faces are the counter-clockwise ones
+    mFrontFace = GL_CCW;
   }
 
   virtual void draw(NVGcontext *ctx)
@@ -145,7 +155,12 @@ public:
     mShader.setUniform("model_color", mModelColor);
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(mFrontFace);
+
     mShader.drawArray(GL_TRIANGLES, 0, mMesh.mPos.cols());
+
     glDisable(GL_DEPTH_TEST);
   }
 };
