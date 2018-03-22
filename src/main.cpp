@@ -1,6 +1,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <iostream>
 
@@ -27,6 +28,7 @@ private:
 
   //model parameters
   Eigen::Vector4f mModelColor;
+  glm::mat4 mModel;
 
   //general parameters
   GLenum mFrontFace;
@@ -49,8 +51,8 @@ public:
 
     Slider *near_plane = new Slider(window);
     near_plane->setFixedWidth(100);
-    near_plane->setTooltip("Set near Z plane to any value between 1 and 10");
-    near_plane->setCallback( [this](float val) { mNear = 1.0f + val * (10.0f - 1.0f); } );
+    near_plane->setTooltip("Set near Z plane to any value between 0 and 10");
+    near_plane->setCallback( [this](float val) { mNear = val * 10.0f; } );
 
     Slider *far_plane = new Slider(window);
     far_plane->setFixedWidth(100);
@@ -61,7 +63,7 @@ public:
     color_picker->setTooltip("Color of the triangles in the model");
     color_picker->setFinalCallback([this](const Color& c) { this->mModelColor = c; });
 
-    Button *toggle_cw_ccw = new Button(window, "Toggle CW/CCW culling");
+    Button *toggle_cw_ccw = new Button(window, "Toggle CW/CCW drawing");
     toggle_cw_ccw->setTooltip("This button selects which of the CCW and CW triangles should be culled");
     toggle_cw_ccw->setCallback( [&] { mFrontFace = (mFrontFace == GL_CW) ? GL_CCW : GL_CW; } );
 
@@ -70,11 +72,14 @@ public:
     //----------------------------------------
     //----------- Geometry loading -----------
     //----------------------------------------
-    mMesh.load_file("../data/cube.in");
+    mMesh.load_file("../data/cow_up.in");
 
+    mMesh.transform_to_center(mModel);
     mModelColor<<0.0f, 1.0f, 0.0f, 1.0f;
 
-    mEye = glm::vec3(0.0f, 0.0f, 1.0f);
+    printf("%s\n", glm::to_string(mModel).c_str());
+
+    mEye = glm::vec3(0.0f, 0.0f, 0.0f);
     mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
     mUp = glm::vec3(0.0f, 1.0f, 0.0f);
     mNear = 1.0f; mFar = 10.0f;
@@ -146,7 +151,7 @@ public:
     glm::mat4 view = glm::lookAt(mEye, mEye + mLookDir, mUp);
     glm::mat4 proj = glm::perspective(84.0f, 1.6666f, mNear, mFar);
 
-    glm::mat4 mvp_ = proj * view;
+    glm::mat4 mvp_ = proj * view * mModel;
     Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_), 4, 4);
 
     //actual drawing

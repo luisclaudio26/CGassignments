@@ -30,6 +30,7 @@ public:
   }
 
   void load_file(const std::string& path);
+  void transform_to_center(glm::mat4& M);
 };
 
 #endif
