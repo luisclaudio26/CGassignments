@@ -12,6 +12,8 @@
 #include <nanogui/layout.h>
 #include <nanogui/button.h>
 #include <nanogui/slider.h>
+#include <nanogui/label.h>
+#include <nanogui/checkbox.h>
 #include <nanogui/colorpicker.h>
 
 #include "../include/mesh.h"
@@ -34,14 +36,14 @@ private:
   GLenum mFrontFace;
 
 public:
-  ExampleApp() : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
+  ExampleApp(const char* path) : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
   {
     //----------------------------------
     //----------- GUI setup ------------
     //----------------------------------
     using namespace nanogui;
 
-    Window *window = new Window(this, "General options");
+    Window *window = new Window(this, "Scene options");
     window->setPosition(Vector2i(0, 0));
     window->setLayout(new GroupLayout());
 
@@ -52,30 +54,34 @@ public:
                                       mEye = glm::vec3(0.0f, 0.0f, 0.0f);
                                       mNear = 1.0f; mFar = 10.0f; });
 
+    new Label(window, "Near Z plane", "sans-bold");
+
     Slider *near_plane = new Slider(window);
     near_plane->setFixedWidth(100);
     near_plane->setTooltip("Set near Z plane to any value between 0 and 20");
     near_plane->setCallback( [this](float val) { mNear = val * 20.0f; } );
+
+    new Label(window, "Far Z plane", "sans-bold");
 
     Slider *far_plane = new Slider(window);
     far_plane->setFixedWidth(100);
     far_plane->setTooltip("Set near Z plane to any value between 10 and 100");
     far_plane->setCallback( [this](float val) { mFar = 10.0f + val * (100.0f - 10.0f); } );
 
+    new Label(window, "Model color", "sans-bold");
     ColorPicker *color_picker = new ColorPicker(window, mModelColor);
-    color_picker->setTooltip("Color of the triangles in the model");
     color_picker->setFinalCallback([this](const Color& c) { this->mModelColor = c; });
 
-    Button *toggle_cw_ccw = new Button(window, "Toggle CW/CCW drawing");
-    toggle_cw_ccw->setTooltip("This button selects which of the CCW and CW triangles should be culled");
-    toggle_cw_ccw->setCallback( [&] { mFrontFace = (mFrontFace == GL_CW) ? GL_CCW : GL_CW; } );
+    CheckBox *draw_cw = new CheckBox(window, "Draw triangles in CW order");
+    draw_cw->setTooltip("Uncheck this box for drawing triangles in CCW order");
+    draw_cw->setCallback([&](bool cw) { mFrontFace = cw ? GL_CW : GL_CCW; });
 
     performLayout();
 
     //----------------------------------------
     //----------- Geometry loading -----------
     //----------------------------------------
-    mMesh.load_file("../data/cow_up.in");
+    mMesh.load_file(path);
 
     mMesh.transform_to_center(mModel);
     mModelColor<<0.0f, 1.0f, 0.0f, 1.0f;
@@ -218,7 +224,7 @@ int main(int argc, char** args)
   nanogui::init();
 
   /* scoped variables. why this? */ {
-    nanogui::ref<ExampleApp> app = new ExampleApp;
+    nanogui::ref<ExampleApp> app = new ExampleApp(args[1]);
     app->drawAll();
     app->setVisible(true);
     nanogui::mainloop();
