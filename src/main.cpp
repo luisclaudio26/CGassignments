@@ -27,6 +27,7 @@ private:
   //Camera parameters
   glm::vec3 mEye, mLookDir, mUp;
   float mNear, mFar, mStep;
+  bool mLockView;
 
   //model parameters
   Eigen::Vector4f mModelColor;
@@ -76,6 +77,11 @@ public:
     draw_cw->setTooltip("Uncheck this box for drawing triangles in CCW order");
     draw_cw->setCallback([&](bool cw) { mFrontFace = cw ? GL_CW : GL_CCW; });
 
+    CheckBox *lock_view = new CheckBox(window, "Lock view on the model");
+    lock_view->setTooltip("Lock view point at the point where the model is centered. This will disable camera rotation.");
+    lock_view->setCallback([&](bool lock) { mLockView = lock;
+                                            mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye); });
+
     performLayout();
 
     //----------------------------------------
@@ -93,6 +99,7 @@ public:
     mUp = glm::vec3(0.0f, 1.0f, 0.0f);
     mNear = 1.0f; mFar = 10.0f;
     mStep = 0.1f;
+    mLockView = false;
 
     //--------------------------------------
     //----------- Shader options -----------
@@ -125,32 +132,51 @@ public:
     if(key == GLFW_KEY_A && action == GLFW_REPEAT) {
       glm::vec3 left = glm::cross(mUp, mLookDir);
       mEye += left * mStep;
+      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
       return true;
     }
     if(key == GLFW_KEY_D && action == GLFW_REPEAT) {
-      glm::vec3 left = -glm::cross(mUp, mLookDir);
-      mEye += left * mStep;
+      glm::vec3 left = glm::cross(mUp, mLookDir);
+      mEye -= left * mStep;
+      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
       return true;
     }
     if( key == GLFW_KEY_W && action == GLFW_REPEAT ) {
       mEye += mLookDir * mStep;
+      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
       return true;
     }
     if( key == GLFW_KEY_S && action == GLFW_REPEAT ) {
       mEye += mLookDir * (-mStep);
+      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
       return true;
     }
     if( key == GLFW_KEY_R && action == GLFW_REPEAT ) {
       mEye += mUp * mStep;
+      if(mLockView)
+      {
+        glm::vec3 left = glm::cross(mUp, mLookDir);
+        mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+        mUp = glm::cross(mLookDir, left);
+      }
+
       return true;
     }
     if( key == GLFW_KEY_F && action == GLFW_REPEAT ) {
       mEye += mUp * (-mStep);
+      if(mLockView)
+      {
+        glm::vec3 left = glm::cross(mUp, mLookDir);
+        mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+        mUp = glm::cross(mLookDir, left);
+      }
       return true;
     }
 
     //TODO: we can precompute sin and cos values!
     if( key == GLFW_KEY_UP && action == GLFW_REPEAT ) {
+      if(mLockView) return true;
+
       float theta = 0.0174533f; //1° degree in radians
       float cosTheta = cos(theta), sinTheta = sin(theta);
       glm::vec3 u = mLookDir, v = mUp;
@@ -161,6 +187,7 @@ public:
       return true;
     }
     if( key == GLFW_KEY_DOWN && action == GLFW_REPEAT ) {
+      if(mLockView) return true;
       float theta = -0.0174533f; //1° degree in radians
       float cosTheta = cos(theta), sinTheta = sin(theta);
       glm::vec3 u = mLookDir, v = mUp;
@@ -171,6 +198,7 @@ public:
       return true;
     }
     if( key == GLFW_KEY_RIGHT && action == GLFW_REPEAT ) {
+      if(mLockView) return true;
       float theta = 0.0174533f; //1° degree in radians
       float cosTheta = cos(theta), sinTheta = sin(theta);
       glm::vec3 u = glm::cross(mUp, mLookDir), v = mLookDir;
@@ -180,6 +208,7 @@ public:
       return true;
     }
     if( key == GLFW_KEY_LEFT && action == GLFW_REPEAT ) {
+      if(mLockView) return true;
       float theta = -0.0174533f; //1° degree in radians
       float cosTheta = cos(theta), sinTheta = sin(theta);
       glm::vec3 u = glm::cross(mUp, mLookDir), v = mLookDir;
