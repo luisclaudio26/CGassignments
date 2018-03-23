@@ -140,6 +140,30 @@ public:
       return true;
     }
 
+    //TODO: we can precompute sin and cos values!
+    if( key == GLFW_KEY_UP && action == GLFW_REPEAT ) {
+      float theta = 0.0174533f; //1° degree in radians
+      float cosTheta = cos(theta), sinTheta = sin(theta);
+      glm::vec3 u = mLookDir, v = mUp;
+
+      mLookDir = cosTheta*u + sinTheta*v;
+      mUp = -sinTheta*u + cosTheta*v;
+
+      return true;
+    }
+
+    if( key == GLFW_KEY_DOWN && action == GLFW_REPEAT ) {
+      float theta = -0.0174533f; //1° degree in radians
+      float cosTheta = cos(theta), sinTheta = sin(theta);
+      glm::vec3 u = mLookDir, v = mUp;
+
+      mLookDir = cosTheta*u + sinTheta*v;
+      mUp = -sinTheta*u + cosTheta*v;
+
+      return true;
+    }
+
+
     return false;
   }
 

@@ -25,7 +25,9 @@ void Mesh::transform_to_center(glm::mat4& M)
 
   //compute translation from the center to
   //the midpoint in the Z axis between the
-  //near and far plane.
+  //near and far plane. Also, compute scaling
+  //so that the objects bounding box has the
+  //width as the frutum in the Z plane
   //THIS ASSUMES THE FOLLOWING CAMERA PARAMETERS:
   // - eye = origin,
   // - look_dir = (0,0,-1),
