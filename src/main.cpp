@@ -46,18 +46,21 @@ public:
     window->setLayout(new GroupLayout());
 
     Button *reset_view = new Button(window, "Reset view");
-    reset_view->setCallback( [] { printf("Reset\n"); } );
     reset_view->setTooltip("Reset view so the object will be centered again");
+    reset_view->setCallback( [this] { mUp = glm::vec3(0.0f, 1.0f, 0.0f);
+                                      mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
+                                      mEye = glm::vec3(0.0f, 0.0f, 0.0f);
+                                      mNear = 1.0f; mFar = 10.0f; });
 
     Slider *near_plane = new Slider(window);
     near_plane->setFixedWidth(100);
-    near_plane->setTooltip("Set near Z plane to any value between 0 and 10");
-    near_plane->setCallback( [this](float val) { mNear = val * 10.0f; } );
+    near_plane->setTooltip("Set near Z plane to any value between 0 and 20");
+    near_plane->setCallback( [this](float val) { mNear = val * 20.0f; } );
 
     Slider *far_plane = new Slider(window);
     far_plane->setFixedWidth(100);
-    far_plane->setTooltip("Set near Z plane to any value between 5 and 15");
-    far_plane->setCallback( [this](float val) { mFar = 5.0f + val * (15.0f - 5.0f); } );
+    far_plane->setTooltip("Set near Z plane to any value between 10 and 100");
+    far_plane->setCallback( [this](float val) { mFar = 10.0f + val * (100.0f - 10.0f); } );
 
     ColorPicker *color_picker = new ColorPicker(window, mModelColor);
     color_picker->setTooltip("Color of the triangles in the model");
@@ -83,7 +86,7 @@ public:
     mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
     mUp = glm::vec3(0.0f, 1.0f, 0.0f);
     mNear = 1.0f; mFar = 10.0f;
-    mStep = 0.05f;
+    mStep = 0.1f;
 
     //--------------------------------------
     //----------- Shader options -----------
@@ -151,7 +154,6 @@ public:
 
       return true;
     }
-
     if( key == GLFW_KEY_DOWN && action == GLFW_REPEAT ) {
       float theta = -0.0174533f; //1° degree in radians
       float cosTheta = cos(theta), sinTheta = sin(theta);
@@ -162,7 +164,24 @@ public:
 
       return true;
     }
+    if( key == GLFW_KEY_RIGHT && action == GLFW_REPEAT ) {
+      float theta = 0.0174533f; //1° degree in radians
+      float cosTheta = cos(theta), sinTheta = sin(theta);
+      glm::vec3 u = glm::cross(mUp, mLookDir), v = mLookDir;
 
+      mLookDir = -sinTheta*u + cosTheta*v;
+
+      return true;
+    }
+    if( key == GLFW_KEY_LEFT && action == GLFW_REPEAT ) {
+      float theta = -0.0174533f; //1° degree in radians
+      float cosTheta = cos(theta), sinTheta = sin(theta);
+      glm::vec3 u = glm::cross(mUp, mLookDir), v = mLookDir;
+
+      mLookDir = -sinTheta*u + cosTheta*v;
+
+      return true;
+    }
 
     return false;
   }
@@ -173,10 +192,10 @@ public:
 
     //uniform uploading
     glm::mat4 view = glm::lookAt(mEye, mEye + mLookDir, mUp);
-    glm::mat4 proj = glm::perspective(84.0f, 1.6666f, mNear, mFar);
+    glm::mat4 proj = glm::perspective(45.0f, 1.6666f, mNear, mFar);
 
     glm::mat4 mvp_ = proj * view * mModel;
-    Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_), 4, 4);
+    Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_) );
 
     //actual drawing
     mShader.bind();

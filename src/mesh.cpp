@@ -40,7 +40,7 @@ void Mesh::transform_to_center(glm::mat4& M)
                                                                   -center.z));
 
   glm::vec4 centered_max = M*glm::vec4(max, 1.0f);
-  float half_frustrum = 9.51f; //Near.tan(84)
+  float half_frustrum = 1.0f; //Near x tan(45)
   glm::mat4 scale = glm::scale(glm::mat4(1.0f),
                                glm::vec3(half_frustrum/centered_max.x));
 
