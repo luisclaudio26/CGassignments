@@ -15,6 +15,7 @@
 #include <nanogui/label.h>
 #include <nanogui/checkbox.h>
 #include <nanogui/colorpicker.h>
+#include <nanogui/combobox.h>
 
 #include "../include/mesh.h"
 
@@ -35,6 +36,7 @@ private:
 
   //general parameters
   GLenum mFrontFace;
+  GLenum mDrawMode;
 
 public:
   ExampleApp(const char* path) : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
@@ -82,6 +84,15 @@ public:
     lock_view->setCallback([&](bool lock) { mLockView = lock;
                                             mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye); });
 
+    ComboBox *draw_mode = new ComboBox(window, {"Points", "Wireframe", "Fill"});
+    draw_mode->setCallback([&](int opt) {
+                            switch(opt)
+                            {
+                              case 0: mDrawMode = GL_POINT; break;
+                              case 1: mDrawMode = GL_LINE; break;
+                              case 2: mDrawMode = GL_FILL; break;
+                            } });
+
     performLayout();
 
     //----------------------------------------
@@ -118,6 +129,9 @@ public:
 
     //front faces are the counter-clockwise ones
     mFrontFace = GL_CCW;
+
+    //draw as filled polygons
+    mDrawMode = GL_POINTS;
   }
 
   virtual void draw(NVGcontext *ctx)
@@ -237,13 +251,21 @@ public:
     mShader.setUniform("mvp", mvp);
     mShader.setUniform("model_color", mModelColor);
 
+    //Z buffering
     glEnable(GL_DEPTH_TEST);
+
+    //Backface/Frontface culling
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(mFrontFace);
 
+    //draw mode
+    glPolygonMode(GL_FRONT_AND_BACK, mDrawMode);
+
     mShader.drawArray(GL_TRIANGLES, 0, mMesh.mPos.cols());
 
+    //disable options
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDisable(GL_DEPTH_TEST);
   }
 };
