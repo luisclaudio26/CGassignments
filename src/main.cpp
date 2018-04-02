@@ -19,6 +19,10 @@
 
 #include "../include/mesh.h"
 
+#define THETA 0.0174533f
+#define COSTHETA float(cos(THETA))
+#define SINTHETA float(sin(THETA))
+
 class ExampleApp : public nanogui::Screen
 {
 private:
@@ -26,7 +30,7 @@ private:
   Mesh mMesh;
 
   //Camera parameters
-  glm::vec3 mEye, mLookDir, mUp;
+  glm::vec3 mEye, mLookDir, mUp, mRight;
   float mNear, mFar, mStep;
   bool mLockView;
 
@@ -54,6 +58,7 @@ public:
     reset_view->setTooltip("Reset view so the object will be centered again");
     reset_view->setCallback( [this] { mUp = glm::vec3(0.0f, 1.0f, 0.0f);
                                       mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
+                                      mRight = glm::vec3(1.0f, 0.0f, 0.0f);
                                       mEye = glm::vec3(0.0f, 0.0f, 0.0f);
                                       mNear = 1.0f; mFar = 10.0f; });
 
@@ -82,7 +87,9 @@ public:
     CheckBox *lock_view = new CheckBox(window, "Lock view on the model");
     lock_view->setTooltip("Lock view point at the point where the model is centered. This will disable camera rotation.");
     lock_view->setCallback([&](bool lock) { mLockView = lock;
-                                            mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye); });
+                                            mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+                                            mRight = glm::cross(mLookDir, mUp);
+                                          });
 
     ComboBox *draw_mode = new ComboBox(window, {"Points", "Wireframe", "Fill"});
     draw_mode->setCallback([&](int opt) {
@@ -108,6 +115,7 @@ public:
     mEye = glm::vec3(0.0f, 0.0f, 0.0f);
     mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
     mUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    mRight = glm::cross(mLookDir, mUp);
     mNear = 1.0f; mFar = 10.0f;
     mStep = 0.1f;
     mLockView = false;
@@ -144,93 +152,111 @@ public:
 
     //camera movement
     if(key == GLFW_KEY_A && action == GLFW_REPEAT) {
-      glm::vec3 left = glm::cross(mUp, mLookDir);
-      mEye += left * mStep;
-      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+      mEye += (-mRight) * mStep;
+      if(mLockView)
+      {
+        mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+        mRight = glm::cross(mLookDir, mUp);
+      }
       return true;
     }
     if(key == GLFW_KEY_D && action == GLFW_REPEAT) {
-      glm::vec3 left = glm::cross(mUp, mLookDir);
-      mEye -= left * mStep;
-      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+      mEye += mRight * mStep;
+      if(mLockView)
+      {
+        mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+        mRight = glm::cross(mLookDir, mUp);
+      }
       return true;
     }
     if( key == GLFW_KEY_W && action == GLFW_REPEAT ) {
       mEye += mLookDir * mStep;
-      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+      //if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
       return true;
     }
     if( key == GLFW_KEY_S && action == GLFW_REPEAT ) {
       mEye += mLookDir * (-mStep);
-      if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
+      //if(mLockView) mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
       return true;
     }
     if( key == GLFW_KEY_R && action == GLFW_REPEAT ) {
       mEye += mUp * mStep;
       if(mLockView)
       {
-        glm::vec3 left = glm::cross(mUp, mLookDir);
         mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
-        mUp = glm::cross(mLookDir, left);
+        mUp = glm::cross(mRight, mLookDir);
       }
 
       return true;
     }
     if( key == GLFW_KEY_F && action == GLFW_REPEAT ) {
-      mEye += mUp * (-mStep);
+      mEye += (-mUp) * mStep;
       if(mLockView)
       {
-        glm::vec3 left = glm::cross(mUp, mLookDir);
         mLookDir = glm::normalize(glm::vec3(0.0f, 0.0f, -5.5f) - mEye);
-        mUp = glm::cross(mLookDir, left);
+        mUp = glm::cross(mRight, mLookDir);
       }
       return true;
     }
 
     //TODO: we can precompute sin and cos values!
-    if( key == GLFW_KEY_UP && action == GLFW_REPEAT ) {
+    if( key == GLFW_KEY_U && action == GLFW_REPEAT ) {
       if(mLockView) return true;
 
-      float theta = 0.0174533f; //1° degree in radians
-      float cosTheta = cos(theta), sinTheta = sin(theta);
       glm::vec3 u = mLookDir, v = mUp;
-
-      mLookDir = cosTheta*u + sinTheta*v;
-      mUp = -sinTheta*u + cosTheta*v;
+      mLookDir = COSTHETA*u + SINTHETA*v;
+      mUp = -SINTHETA*u + COSTHETA*v;
 
       return true;
     }
-    if( key == GLFW_KEY_DOWN && action == GLFW_REPEAT ) {
+    if( key == GLFW_KEY_J && action == GLFW_REPEAT ) {
       if(mLockView) return true;
-      float theta = -0.0174533f; //1° degree in radians
-      float cosTheta = cos(theta), sinTheta = sin(theta);
+
       glm::vec3 u = mLookDir, v = mUp;
-
-      mLookDir = cosTheta*u + sinTheta*v;
-      mUp = -sinTheta*u + cosTheta*v;
+      mLookDir = COSTHETA*u + -SINTHETA*v;
+      mUp = SINTHETA*u + COSTHETA*v;
 
       return true;
     }
-    if( key == GLFW_KEY_RIGHT && action == GLFW_REPEAT ) {
+    if( key == GLFW_KEY_K && action == GLFW_REPEAT ) {
       if(mLockView) return true;
-      float theta = 0.0174533f; //1° degree in radians
-      float cosTheta = cos(theta), sinTheta = sin(theta);
-      glm::vec3 u = glm::cross(mUp, mLookDir), v = mLookDir;
 
-      mLookDir = -sinTheta*u + cosTheta*v;
+      glm::vec3 u = mRight, v = mLookDir;
+      mRight = COSTHETA*u + -SINTHETA*v;
+      mLookDir = SINTHETA*u + COSTHETA*v;
 
       return true;
     }
-    if( key == GLFW_KEY_LEFT && action == GLFW_REPEAT ) {
+    if( key == GLFW_KEY_H && action == GLFW_REPEAT ) {
       if(mLockView) return true;
-      float theta = -0.0174533f; //1° degree in radians
-      float cosTheta = cos(theta), sinTheta = sin(theta);
-      glm::vec3 u = glm::cross(mUp, mLookDir), v = mLookDir;
 
-      mLookDir = -sinTheta*u + cosTheta*v;
+      glm::vec3 u = mRight, v = mLookDir;
+      mRight = COSTHETA*u + SINTHETA*v;
+      mLookDir = -SINTHETA*u + COSTHETA*v;
 
       return true;
     }
+
+    //------------
+    if( key == GLFW_KEY_M && action == GLFW_REPEAT ) {
+      if(mLockView) return true;
+
+      glm::vec3 u = mRight, v = mUp;
+      mRight = COSTHETA*u + -SINTHETA*v;
+      mUp = SINTHETA*u + COSTHETA*v;
+
+      return true;
+    }
+    if( key == GLFW_KEY_N && action == GLFW_REPEAT ) {
+      if(mLockView) return true;
+
+      glm::vec3 u = mRight, v = mUp;
+      mRight = COSTHETA*u + SINTHETA*v;
+      mUp = -SINTHETA*u + COSTHETA*v;
+
+      return true;
+    }
+    //---------------
 
     return false;
   }
