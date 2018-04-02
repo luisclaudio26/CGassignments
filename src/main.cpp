@@ -27,7 +27,7 @@ private:
 
   //Camera parameters
   glm::vec3 mEye, mLookDir, mUp;
-  float mNear, mFar, mStep;
+  float mNear, mFar, mStep, mFoV;
   bool mLockView;
 
   //model parameters
@@ -55,7 +55,8 @@ public:
     reset_view->setCallback( [this] { mUp = glm::vec3(0.0f, 1.0f, 0.0f);
                                       mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
                                       mEye = glm::vec3(0.0f, 0.0f, 0.0f);
-                                      mNear = 1.0f; mFar = 10.0f; });
+                                      mNear = 1.0f; mFar = 10.0f;
+                                      mFoV = 45.0f; });
 
     new Label(window, "Near Z plane", "sans-bold");
 
@@ -70,6 +71,13 @@ public:
     far_plane->setFixedWidth(100);
     far_plane->setTooltip("Set near Z plane to any value between 10 and 100");
     far_plane->setCallback( [this](float val) { mFar = 10.0f + val * (100.0f - 10.0f); } );
+
+    new Label(window, "Field of view (deg)", "sans-bold");
+
+    Slider *fov = new Slider(window);
+    fov->setFixedWidth(100);
+    fov->setTooltip("Set the field of view to any value between 5 and 150");
+    fov->setCallback( [this](float val) { mFoV = 5.0f + val * (150.0f - 5.0f); } );
 
     new Label(window, "Model color", "sans-bold");
     ColorPicker *color_picker = new ColorPicker(window, mModelColor);
@@ -111,6 +119,7 @@ public:
     mNear = 1.0f; mFar = 10.0f;
     mStep = 0.1f;
     mLockView = false;
+    mFoV = 45.0;
 
     //--------------------------------------
     //----------- Shader options -----------
@@ -241,7 +250,7 @@ public:
 
     //uniform uploading
     glm::mat4 view = glm::lookAt(mEye, mEye + mLookDir, mUp);
-    glm::mat4 proj = glm::perspective(45.0f, 1.6666f, mNear, mFar);
+    glm::mat4 proj = glm::perspective(glm::radians(mFoV), 1.6666f, mNear, mFar);
 
     glm::mat4 mvp_ = proj * view * mModel;
     Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_) );

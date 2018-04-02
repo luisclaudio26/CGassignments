@@ -34,7 +34,7 @@ void Mesh::transform_to_center(glm::mat4& M)
   // - up = (0,1,0),
   // - near = 1
   // - far = 10
-  // - FoV = 84°
+  // - FoV = 45°
   glm::mat4 to_origin = glm::translate(glm::mat4(1.0f), glm::vec3(-center.x,
                                                                   -center.y,
                                                                   -center.z));
