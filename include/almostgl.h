@@ -15,7 +15,6 @@ class AlmostGL : public nanogui::GLCanvas
 private:
   nanogui::GLShader shader;
   Mesh model;
-  glm::mat4 mModel;
 
   const GlobalParameters& param;
 

@@ -34,21 +34,6 @@ private:
 
   GlobalParameters param;
 
-  /*
-  //Camera parameters
-  glm::vec3 param.cam.eye, param.cam.look_dir, mUp, mRight;
-  float mNear, mFar, param.cam.step, mFoV;
-  bool mLockView;
-
-  //model parameters
-  Eigen::Vector4f mModelColor;
-  glm::mat4 mModel;
-
-  //general parameters
-  GLenum mFrontFace;
-  GLenum mDrawMode;
-  */
-
 public:
   ExampleApp(const char* path) : nanogui::Screen(Eigen::Vector2i(960, 540), "NanoGUI Test")
   {
@@ -120,7 +105,6 @@ public:
     winAlmostGL->setLayout(new GroupLayout());
     mCanvas = new AlmostGL(param, path, winAlmostGL);
 
-
     performLayout();
 
     //----------------------------------------
@@ -142,17 +126,6 @@ public:
     param.cam.FoV = 45.0f;
     param.cam.lock_view = false;
 
-    /*
-    mEye = glm::vec3(0.0f, 0.0f, 0.0f);
-    param.cam.look_dir = glm::vec3(0.0f, 0.0f, -1.0f);
-    mUp = glm::vec3(0.0f, 1.0f, 0.0f);
-    param.cam.right = glm::cross(mLookDir, mUp);
-    param.cam.near = 1.0f; param.cam.far = 10.0f;
-    mStep = 0.1f;
-    mLockView = false;
-    param.cam.FoV = 45.0;
-    */
-
     //--------------------------------------
     //----------- Shader options -----------
     //--------------------------------------
@@ -170,11 +143,9 @@ public:
 
     //front faces are the counter-clockwise ones
     param.front_face = GL_CCW;
-    //mFrontFace = GL_CCW;
 
     //draw as filled polygons
     param.draw_mode = GL_POINTS;
-    //mDrawMode = GL_POINTS;
   }
 
   virtual void draw(NVGcontext *ctx)

@@ -6,7 +6,10 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
                     Widget *parent) : nanogui::GLCanvas(parent), param(param)
 {
   this->model.load_file(path);
-  this->model.transform_to_center(mModel);
+
+  //We'll use the same model matrix for both contexts, as we
+  //are loading the same model on both.
+  //this->model.transform_to_center(mModel);
 
   this->shader.initFromFiles("almostgl",
                               "../shaders/almostgl.vs",
@@ -25,27 +28,20 @@ void AlmostGL::drawGL()
 {
   using namespace nanogui;
 
-  glm::vec3 mEye = glm::vec3(0.0f, 0.0f, 0.0f);
-  glm::vec3 mLookDir = glm::vec3(0.0f, 0.0f, -1.0f);
-  glm::vec3 mUp = glm::vec3(0.0f, 1.0f, 0.0f);
-  glm::vec3 mRight = glm::cross(mLookDir, mUp);
-  float mNear = 1.0f, mFar = 10.0f;
-  float mStep = 0.1f;
-  bool mLockView = false;
-  float mFoV = 45.0;
-  Eigen::Vector4f mModelColor; mModelColor<<0.0f,1.0f,0.0f,1.0f;
-
   //uniform uploading
-  glm::mat4 view = glm::lookAt(mEye, mEye + mLookDir, mUp);
-  glm::mat4 proj = glm::perspective(glm::radians(mFoV), 1.6666f, mNear, mFar);
+  glm::mat4 view = glm::lookAt(param.cam.eye,
+                                param.cam.eye + param.cam.look_dir,
+                                param.cam.up);
+  glm::mat4 proj = glm::perspective(glm::radians(param.cam.FoV), 1.6666f,
+                                    param.cam.near, param.cam.far);
 
-  glm::mat4 mvp_ = proj * view * mModel;
+  glm::mat4 mvp_ = proj * view * param.model2world;
   Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_) );
 
   //actual drawing
   this->shader.bind();
   this->shader.setUniform("mvp", mvp);
-  this->shader.setUniform("model_color", mModelColor);
+  this->shader.setUniform("model_color", param.model_color);
 
   //Z buffering
   glEnable(GL_DEPTH_TEST);
@@ -53,10 +49,10 @@ void AlmostGL::drawGL()
   //Backface/Frontface culling
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
-  glFrontFace(GL_CCW);
+  glFrontFace(param.front_face);
 
   //draw mode
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glPolygonMode(GL_FRONT_AND_BACK, param.draw_mode);
 
   this->shader.drawArray(GL_TRIANGLES, 0, this->model.mPos.cols());
 
