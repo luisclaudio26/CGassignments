@@ -8,6 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include "../include/mesh.h"
+#include "../include/param.h"
 
 class AlmostGL : public nanogui::GLCanvas
 {
@@ -16,8 +17,13 @@ private:
   Mesh model;
   glm::mat4 mModel;
 
+  const GlobalParameters& param;
+
 public:
-  AlmostGL(const char* path, Widget *parent);
+  AlmostGL(const GlobalParameters& param,
+            const char* path,
+            Widget *parent);
+
   void drawGL() override;
 };
 

@@ -1,7 +1,9 @@
 #include "../include/almostgl.h"
 
 
-AlmostGL::AlmostGL(const char* path, Widget *parent) : nanogui::GLCanvas(parent)
+AlmostGL::AlmostGL(const GlobalParameters& param,
+                    const char* path,
+                    Widget *parent) : nanogui::GLCanvas(parent), param(param)
 {
   this->model.load_file(path);
   this->model.transform_to_center(mModel);
