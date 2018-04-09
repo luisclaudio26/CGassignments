@@ -18,6 +18,7 @@
 #include <nanogui/combobox.h>
 
 #include "../include/mesh.h"
+#include "../include/almostgl.h"
 
 #define THETA 0.0174533f
 #define COSTHETA float(cos(THETA))
@@ -28,6 +29,7 @@ class ExampleApp : public nanogui::Screen
 private:
   nanogui::GLShader mShader;
   Mesh mMesh;
+  AlmostGL *mCanvas;
 
   //Camera parameters
   glm::vec3 mEye, mLookDir, mUp, mRight;
@@ -107,6 +109,12 @@ public:
                               case 1: mDrawMode = GL_LINE; break;
                               case 2: mDrawMode = GL_FILL; break;
                             } });
+
+    Window *winAlmostGL = new Window(this, "AlmostGL");
+    winAlmostGL->setPosition(Eigen::Vector2i(50,50));
+    winAlmostGL->setLayout(new GroupLayout());
+    mCanvas = new AlmostGL(path, winAlmostGL);
+
 
     performLayout();
 
