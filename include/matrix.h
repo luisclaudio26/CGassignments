@@ -17,7 +17,9 @@ public:
   float operator()(int i) const;
   float& operator()(int i);
 
+  vec3 operator+(const vec3& rhs) const;
   vec3 operator-() const;
+  vec3 operator-(const vec3& rhs) const;
   vec3 cross(const vec3& rhs) const;
   float dot(const vec3& rhs) const;
   vec3 unit() const;
@@ -53,17 +55,18 @@ public:
 
   float& operator()(int i, int j);
   float operator()(int i, int j) const;
+  float* data() { return e; }
 
   //--------- Operators ---------
   mat4 operator*(const mat4& rhs) const;
   vec4 operator*(const vec4& rhs) const;
 
   //--------- Matrix constructors ---------
-  static mat4 view(const vec3& eye, const vec3& look_dir, const vec3& up)
+  static mat4 view(const vec3& eye, const vec3& look_at, const vec3& up)
   {
-    vec3 w = -look_dir.unit(); //translation is inverted in the end. check this!
-    vec3 u = (w.cross(up)).unit();
-    vec3 v = u.cross(w);
+    vec3 w = (eye-look_at).unit(); //translation is inverted in the end. check this!
+    vec3 u = (up.cross(w)).unit();
+    vec3 v = w.cross(u);
 
     return mat4(vec4(u(0), v(0), w(0), 0.0f),
                 vec4(u(1), v(1), w(1), 0.0f),

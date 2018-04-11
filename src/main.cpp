@@ -102,6 +102,8 @@ public:
                             } });
 
     Window *winAlmostGL = new Window(this, "AlmostGL");
+    winAlmostGL->setFixedSize(Eigen::Vector2i(480, 270));
+    winAlmostGL->setSize(Eigen::Vector2i(480, 270));
     winAlmostGL->setPosition(Eigen::Vector2i(50,50));
     winAlmostGL->setLayout(new GroupLayout());
     mCanvas = new AlmostGL(param, path, winAlmostGL);
@@ -310,18 +312,6 @@ public:
 
 int main(int argc, char** args)
 {
-  mat4 p = mat4::perspective(60.0f, 1.7777f, 2.0f, 10.0f);
-
-  for(int i = 0; i < 4; ++i)
-  {
-    for(int j = 0; j < 4; ++j)
-      printf("%f ", p(i,j));
-    printf("\n");
-  }
-
-  glm::mat4 p_ = glm::perspective(glm::radians(60.0f), 1.7777f, 2.0f, 10.0f);
-  printf("\n\n%s\n", glm::to_string(p_).c_str());
-
   nanogui::init();
 
   /* scoped variables. why this? */ {

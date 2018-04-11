@@ -1,5 +1,6 @@
 #include "../include/almostgl.h"
-
+#include "../include/matrix.h"
+#include <glm/gtc/matrix_access.hpp>
 
 AlmostGL::AlmostGL(const GlobalParameters& param,
                     const char* path,
@@ -29,23 +30,31 @@ void AlmostGL::drawGL()
   using namespace nanogui;
 
   //TODO: first stage of graphic pipeline
-  //1) compute look_at matrix
-  //2) precompute mvp = proj * view * model
+  //X 1) compute look_at matrix
+  //X 2) precompute mvp = proj * view * model
   //3) transform each vertex v = mvp * v;
   //4) divide by w
   //5) loop through primitives and discard those outside
   //   the canonical view cube (clipping)
   //6) send the remaining vertices to the passthrough vertex shader
 
-  //uniform uploading
-  glm::mat4 view = glm::lookAt(param.cam.eye,
-                                param.cam.eye + param.cam.look_dir,
-                                param.cam.up);
-  glm::mat4 proj = glm::perspective(glm::radians(param.cam.FoV), 1.6666f,
-                                    param.cam.near, param.cam.far);
+  //convert params to use internal library
+  vec3 eye = vec3(param.cam.eye[0], param.cam.eye[1], param.cam.eye[2]);
+  vec3 up = vec3(param.cam.up[0], param.cam.up[1], param.cam.up[2]);
+  vec3 right = vec3(param.cam.right[0], param.cam.right[1], param.cam.right[2]);
+  vec3 look_dir = vec3(param.cam.look_dir[0], param.cam.look_dir[1], param.cam.look_dir[2]);
 
-  glm::mat4 mvp_ = proj * view * param.model2world;
-  Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_) );
+  mat4 model2world;
+  for(int i = 0; i < 4; ++i)
+    for(int j = 0; j < 4; ++j)
+      model2world(i,j) = param.model2world[j][i];
+
+  //uniform uploading
+  mat4 view = mat4::view(eye, eye+look_dir, up);
+  mat4 proj = mat4::perspective(param.cam.FoV, 1.7777f, param.cam.near, param.cam.far);
+
+  mat4 mvp_ = proj * view * model2world;
+  Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( mvp_.data() );
 
   //actual drawing
   this->shader.bind();
