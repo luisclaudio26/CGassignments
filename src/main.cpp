@@ -278,7 +278,7 @@ public:
                                   param.cam.up);
 
     glm::mat4 proj = glm::perspective(glm::radians(param.cam.FoV),
-                                      1.6666f,
+                                      1.7777f,
                                       param.cam.near, param.cam.far);
 
     glm::mat4 mvp_ = proj * view * param.model2world;
@@ -310,6 +310,18 @@ public:
 
 int main(int argc, char** args)
 {
+  mat4 p = mat4::perspective(60.0f, 1.7777f, 2.0f, 10.0f);
+
+  for(int i = 0; i < 4; ++i)
+  {
+    for(int j = 0; j < 4; ++j)
+      printf("%f ", p(i,j));
+    printf("\n");
+  }
+
+  glm::mat4 p_ = glm::perspective(glm::radians(60.0f), 1.7777f, 2.0f, 10.0f);
+  printf("\n\n%s\n", glm::to_string(p_).c_str());
+
   nanogui::init();
 
   /* scoped variables. why this? */ {
