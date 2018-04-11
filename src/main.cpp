@@ -20,6 +20,7 @@
 #include "../include/mesh.h"
 #include "../include/almostgl.h"
 #include "../include/param.h"
+#include "../include/matrix.h"
 
 #define THETA 0.0174533f
 #define COSTHETA float(cos(THETA))

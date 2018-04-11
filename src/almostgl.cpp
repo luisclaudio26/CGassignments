@@ -28,6 +28,15 @@ void AlmostGL::drawGL()
 {
   using namespace nanogui;
 
+  //TODO: first stage of graphic pipeline
+  //1) compute look_at matrix
+  //2) precompute mvp = proj * view * model
+  //3) transform each vertex v = mvp * v;
+  //4) divide by w
+  //5) loop through primitives and discard those outside
+  //   the canonical view cube (clipping)
+  //6) send the remaining vertices to the passthrough vertex shader
+
   //uniform uploading
   glm::mat4 view = glm::lookAt(param.cam.eye,
                                 param.cam.eye + param.cam.look_dir,
