@@ -1,53 +1,94 @@
 #include "../include/matrix.h"
+#include <cmath>
 
 //---------------------------------
-//-------------- Vec4 -------------
+//-------------- vec3 -------------
 //---------------------------------
-Vec4::Vec4()
+vec3::vec3() { for(int i = 0; i < 3; ++i) e[i] = 0.0f; }
+vec3::vec3(float x, float y, float z) { e[0] = x; e[1] = y; e[2] = z; }
+float vec3::operator()(int i) const { return e[i]; }
+float& vec3::operator()(int i) { return e[i]; }
+vec3 vec3::cross(const vec3& rhs) const
+{
+  return vec3(e[1]*rhs(2)-e[2]*rhs(1),
+              e[2]*rhs(0)-e[0]*rhs(2),
+              e[0]*rhs(1)-e[1]*rhs(0));
+}
+float vec3::dot(const vec3& rhs) const
+{
+  return e[0]*rhs(0)+e[1]*rhs(1)+e[2]*rhs(2);
+}
+
+vec3 vec3::unit() const
+{
+  float norm = (*this).dot(*this);
+  return vec3(e[0]/norm, e[1]/norm, e[2]/norm);
+}
+
+vec3 vec3::operator-() const
+{
+  return vec3(-e[0], -e[1], -e[2]);
+}
+
+//---------------------------------
+//-------------- vec4 -------------
+//---------------------------------
+vec4::vec4()
 {
   for(int i = 0; i < 4; ++i) e[i] = 0.0f;
 }
 
-Vec4::Vec4(float x, float y, float z, float w)
+vec4::vec4(float x, float y, float z, float w)
 {
   e[0] = x; e[1] = y; e[2] = z; e[3] = w;
 }
 
-float Vec4::operator()(int i) const
+float vec4::operator()(int i) const
 {
   return e[i];
 }
 
-float& Vec4::operator()(int i)
+float& vec4::operator()(int i)
 {
   return e[i];
 }
 
-Vec4 Vec4::operator+(const Vec4& rhs) const
+vec4 vec4::operator+(const vec4& rhs) const
 {
-  return Vec4(e[0]+rhs(0),
+  return vec4(e[0]+rhs(0),
               e[1]+rhs(1),
               e[2]+rhs(2),
               e[3]+rhs(3));
 }
 
-float Vec4::dot(const Vec4& rhs) const
+vec4 vec4::operator-() const
+{
+  return vec4(-e[0], -e[1], -e[2], -e[3]);
+}
+
+float vec4::dot(const vec4& rhs) const
 {
   float acc = 0.0f;
   for(int i = 0; i < 4; ++i) acc += e[i]*rhs(i);
   return acc;
 }
 
+vec4 vec4::unit() const
+{
+  float norm = sqrtf((*this).dot(*this));
+  return vec4(e[0]/norm, e[1]/norm, e[2]/norm, e[3]/norm);
+}
+
 //---------------------------------
-//-------------- Mat4 -------------
+//-------------- mat4 -------------
 //---------------------------------
-Mat4::Mat4()
+mat4::mat4()
 {
   for(int i = 0; i < 16; ++i)
     e[i] = 0.0f;
 }
 
-Mat4::Mat4(const Vec4& c1, const Vec4& c2, const Vec4& c3, const Vec4& c4)
+mat4::mat4(const vec4& c1, const vec4& c2, const vec4& c3, const vec4& c4)
 {
   for(int i = 0; i < 4; ++i)
   {
@@ -58,19 +99,19 @@ Mat4::Mat4(const Vec4& c1, const Vec4& c2, const Vec4& c3, const Vec4& c4)
   }
 }
 
-float& Mat4::operator()(int i, int j)
+float& mat4::operator()(int i, int j)
 {
   return e[i+4*j];
 }
 
-float Mat4::operator()(int i, int j) const
+float mat4::operator()(int i, int j) const
 {
   return e[i+4*j];
 }
 
-Mat4 Mat4::operator*(const Mat4& rhs) const
+mat4 mat4::operator*(const mat4& rhs) const
 {
-  Mat4 out;
+  mat4 out;
   for(int i = 0; i < 4; ++i)
     for(int j = 0; j < 4; ++j)
       for(int k = 0; k < 4; ++k)
@@ -79,9 +120,9 @@ Mat4 Mat4::operator*(const Mat4& rhs) const
   return out;
 }
 
-Vec4 Mat4::operator*(const Vec4& rhs) const
+vec4 mat4::operator*(const vec4& rhs) const
 {
-  Vec4 out;
+  vec4 out;
   for(int i = 0; i < 4; ++i)
     for(int k = 0; k < 4; ++k)
       out(i) += (*this)(i,k) * rhs(k);
