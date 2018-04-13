@@ -37,7 +37,7 @@ void AlmostGL::drawGL()
   //TODO: first stage of graphic pipeline
   //X 1) compute look_at matrix
   //X 2) precompute mvp = proj * view * model
-  //3) transform each vertex v = mvp * v;
+  //X 3) transform each vertex v = mvp * v;
   //4) divide by w
   //5) loop through primitives and discard those outside
   //   the canonical view cube (clipping)

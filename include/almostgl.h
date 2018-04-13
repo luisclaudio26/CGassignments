@@ -24,6 +24,7 @@ public:
   AlmostGL(const GlobalParameters& param,
             const char* path,
             Widget *parent);
+  ~AlmostGL() { delete[] vbuffer; }
 
   void drawGL() override;
 };
