@@ -1,9 +1,9 @@
 #version 450
 
 // from vertex shader
-//in vec3 f_amb, f_diff, f_spec;
-//in float f_shininess;
-//in vec3 f_normal;
+in vec3 f_amb, f_diff, f_spec;
+in float f_shininess;
+in vec3 f_normal;
 
 // fragment final color
 out vec4 color;
