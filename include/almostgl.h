@@ -16,6 +16,8 @@ private:
   nanogui::GLShader shader;
   Mesh model;
 
+  float *vbuffer;
+
   const GlobalParameters& param;
 
 public:

@@ -1,6 +1,7 @@
 #include "../include/almostgl.h"
 #include "../include/matrix.h"
 #include <glm/gtc/matrix_access.hpp>
+#include <nanogui/opengl.h>
 
 AlmostGL::AlmostGL(const GlobalParameters& param,
                     const char* path,
@@ -23,6 +24,10 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   this->shader.uploadAttrib<Eigen::MatrixXf>("diff", this->model.mDiff);
   this->shader.uploadAttrib<Eigen::MatrixXf>("spec", this->model.mSpec);
   this->shader.uploadAttrib<Eigen::MatrixXf>("shininess", this->model.mShininess);
+
+  //preallocate buffer where we'll store the transformed vertices
+  //before copying them to the GPU
+  vbuffer = new float[model.mPos.cols()*4];
 }
 
 void AlmostGL::drawGL()
@@ -49,17 +54,30 @@ void AlmostGL::drawGL()
     for(int j = 0; j < 4; ++j)
       model2world(i,j) = param.model2world[j][i];
 
-  //uniform uploading
+  //important matrices
   mat4 view = mat4::view(eye, eye+look_dir, up);
   mat4 proj = mat4::perspective(param.cam.FoV, 1.7777f, param.cam.near, param.cam.far);
-
   mat4 mvp_ = proj * view * model2world;
-  Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( mvp_.data() );
 
-  //actual drawing
+  //geometric transformations
+  for(int v_id = 0; v_id < model.mPos.cols(); ++v_id)
+  {
+    Eigen::Vector3f v = model.mPos.col(v_id);
+    vec4 v_ = mvp_ * vec4(v(0), v(1), v(2), 1.0f);
+
+    //copy to vbuffer
+    for(int i = 0; i < 4; ++i)
+      vbuffer[4*v_id+i] = v_(i);
+  }
+
+  //data uploading
   this->shader.bind();
-  this->shader.setUniform("mvp", mvp);
   this->shader.setUniform("model_color", param.model_color);
+
+  //-- we unfortunately need to use uploadAttrib which will call glBufferData
+  //-- under the hood. Using glBufferSubData() won't work.
+  Eigen::MatrixXf vbuffer_ = Eigen::Map<Eigen::MatrixXf>(vbuffer, 4, this->model.mPos.cols());
+  this->shader.uploadAttrib<Eigen::MatrixXf>("pos", vbuffer_);
 
   //Z buffering
   glEnable(GL_DEPTH_TEST);

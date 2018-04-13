@@ -17,11 +17,13 @@ struct Elem
 class Mesh
 {
 private:
-  std::vector<Triangle> tris;
+
   std::vector<Material> mats;
 
 public:
   Eigen::MatrixXf mPos, mNormal, mAmb, mDiff, mSpec, mShininess;
+  std::vector<Triangle> tris;
+
 
   Mesh() {}
   Mesh(const std::string& path)
