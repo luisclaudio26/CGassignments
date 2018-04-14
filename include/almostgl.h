@@ -16,7 +16,7 @@ private:
   nanogui::GLShader shader;
   Mesh model;
 
-  float *vbuffer;
+  float *vbuffer, *clipped, *culled;
 
   const GlobalParameters& param;
 
@@ -24,7 +24,7 @@ public:
   AlmostGL(const GlobalParameters& param,
             const char* path,
             Widget *parent);
-  ~AlmostGL() { delete[] vbuffer; }
+  ~AlmostGL() { delete[] vbuffer, clipped, culled; }
 
   void drawGL() override;
 };

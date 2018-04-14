@@ -25,9 +25,11 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   this->shader.uploadAttrib<Eigen::MatrixXf>("spec", this->model.mSpec);
   this->shader.uploadAttrib<Eigen::MatrixXf>("shininess", this->model.mShininess);
 
-  //preallocate buffer where we'll store the transformed vertices
-  //before copying them to the GPU
+  //preallocate buffers where we'll store the transformed,
+  //clipped and culled vertices (triangles) before copying them to the GPU
   vbuffer = new float[model.mPos.cols()*4];
+  clipped = new float[model.mPos.cols()*4];
+  culled = new float[model.mPos.cols()*4];
 }
 
 void AlmostGL::drawGL()
@@ -70,14 +72,47 @@ void AlmostGL::drawGL()
       vbuffer[4*v_id+i] = v_(i);
   }
 
+  //primitive "clipping"
+  //Loop over vbuffer taking the vertices three by three,
+  //then we test if x/y/z coordinates are greater than w. If they are,
+  //then this vertex is outside the view frustum. Although the correct
+  //way of handling this would be to clip the triangle, we'll just
+  //discard it entirely.
+  int clipped_last = 0;
+  for(int t_id = 0; t_id < model.mPos.cols(); t_id += 12)
+  {
+    bool discard_tri = false;
+
+    //loop over vertices of this triangle. if any of them
+    //is outside the view frustum, discard it
+    for(int v_id = 0; v_id < 3; ++v_id)
+    {
+      float w = vbuffer[t_id+4*v_id+3];
+      if(std::fabs(vbuffer[t_id+4*v_id+0]) > w ||
+          std::fabs(vbuffer[t_id+4*v_id+1]) > w ||
+          std::fabs(vbuffer[t_id+4*v_id+2]) > w)
+      {
+        discard_tri = true;
+        break;
+      }
+    }
+
+    if(!discard_tri)
+    {
+      memcpy(&clipped[clipped_last], &vbuffer[t_id], 12*sizeof(float));
+      clipped_last += 12;
+    }
+  }
+  int n_clipped_vertices = (clipped_last+1)/3;
+
   //data uploading
   this->shader.bind();
   this->shader.setUniform("model_color", param.model_color);
 
   //-- we unfortunately need to use uploadAttrib which will call glBufferData
   //-- under the hood. Using glBufferSubData() won't work.
-  Eigen::MatrixXf vbuffer_ = Eigen::Map<Eigen::MatrixXf>(vbuffer, 4, this->model.mPos.cols());
-  this->shader.uploadAttrib<Eigen::MatrixXf>("pos", vbuffer_);
+  Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(clipped, 4, n_clipped_vertices);
+  this->shader.uploadAttrib<Eigen::MatrixXf>("pos", to_gpu);
 
   //Z buffering
   glEnable(GL_DEPTH_TEST);
