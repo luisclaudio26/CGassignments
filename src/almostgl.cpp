@@ -2,6 +2,7 @@
 #include "../include/matrix.h"
 #include <glm/gtc/matrix_access.hpp>
 #include <nanogui/opengl.h>
+#include <cstring>
 
 AlmostGL::AlmostGL(const GlobalParameters& param,
                     const char* path,
@@ -78,7 +79,7 @@ void AlmostGL::drawGL()
   //then this vertex is outside the view frustum. Although the correct
   //way of handling this would be to clip the triangle, we'll just
   //discard it entirely.
-  int clipped_last = 0;
+  int clipped_last = 0; memset(clipped, 0, sizeof(float)*model.mPos.cols()*4);
   for(int t_id = 0; t_id < model.mPos.cols(); t_id += 3)
   {
     bool discard_tri = false;
@@ -102,7 +103,7 @@ void AlmostGL::drawGL()
 
     if(!discard_tri)
     {
-      memcpy(&clipped[clipped_last], &vbuffer[12*t_id], 12*sizeof(float));
+      memcpy(&clipped[clipped_last], &vbuffer[4*t_id], 12*sizeof(float));
       clipped_last += 12;
     }
   }

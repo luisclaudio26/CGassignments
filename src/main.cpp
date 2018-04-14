@@ -102,11 +102,12 @@ public:
                             } });
 
     Window *winAlmostGL = new Window(this, "AlmostGL");
-    winAlmostGL->setFixedSize(Eigen::Vector2i(480, 270));
-    winAlmostGL->setSize(Eigen::Vector2i(480, 270));
+    winAlmostGL->setSize({960, 540});
     winAlmostGL->setPosition(Eigen::Vector2i(50,50));
     winAlmostGL->setLayout(new GroupLayout());
+
     mCanvas = new AlmostGL(param, path, winAlmostGL);
+    mCanvas->setSize({960,540});
 
     performLayout();
 
