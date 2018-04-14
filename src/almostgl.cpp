@@ -79,18 +79,21 @@ void AlmostGL::drawGL()
   //way of handling this would be to clip the triangle, we'll just
   //discard it entirely.
   int clipped_last = 0;
-  for(int t_id = 0; t_id < model.mPos.cols(); t_id += 12)
+  for(int t_id = 0; t_id < model.mPos.cols(); t_id += 3)
   {
     bool discard_tri = false;
 
     //loop over vertices of this triangle. if any of them
     //is outside the view frustum, discard it
+    //TODO: this is discading too many triangles; maybe because
+    //frustum is translated?!
     for(int v_id = 0; v_id < 3; ++v_id)
     {
-      float w = vbuffer[t_id+4*v_id+3];
-      if(std::fabs(vbuffer[t_id+4*v_id+0]) > w ||
-          std::fabs(vbuffer[t_id+4*v_id+1]) > w ||
-          std::fabs(vbuffer[t_id+4*v_id+2]) > w)
+      int v = 12*t_id + 4*v_id;
+      float w = vbuffer[v+3];
+      if(std::fabs(vbuffer[v+0]) > w ||
+          std::fabs(vbuffer[v+1]) > w ||
+          std::fabs(vbuffer[v+2]) > w)
       {
         discard_tri = true;
         break;
@@ -99,11 +102,11 @@ void AlmostGL::drawGL()
 
     if(!discard_tri)
     {
-      memcpy(&clipped[clipped_last], &vbuffer[t_id], 12*sizeof(float));
+      memcpy(&clipped[clipped_last], &vbuffer[12*t_id], 12*sizeof(float));
       clipped_last += 12;
     }
   }
-  int n_clipped_vertices = (clipped_last+1)/3;
+  int n_clipped_vertices = clipped_last/3;
 
   //data uploading
   this->shader.bind();
