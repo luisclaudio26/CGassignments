@@ -30,7 +30,8 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   //clipped and culled vertices (triangles) before copying them to the GPU
   vbuffer = new float[model.mPos.cols()*4];
   clipped = new float[model.mPos.cols()*4];
-  culled = new float[model.mPos.cols()*4];
+  projected = new float[model.mPos.cols()*2];
+  culled = new float[model.mPos.cols()*2];
 }
 
 void AlmostGL::drawGL()
@@ -95,8 +96,14 @@ void AlmostGL::drawGL()
       int v = 4*t_id + 4*v_id;
       float w = vbuffer[v+3];
 
-      if( w <= 0 ) discard_tri = true;
+      //near plane clipping
+      if( w <= 0 )
+      {
+        discard_tri = true;
+        break;
+      }
 
+      //clip primitives outside frustum
       if(std::fabs(vbuffer[v+0]) > w ||
           std::fabs(vbuffer[v+1]) > w ||
           std::fabs(vbuffer[v+2]) > w)
@@ -112,7 +119,21 @@ void AlmostGL::drawGL()
       clipped_last += 12;
     }
   }
-  int n_clipped_vertices = clipped_last/3;
+
+  //perspective division
+  int projected_last = 0;
+  for(int v_id = 0; v_id < clipped_last; v_id += 4)
+  {
+    float &x = projected[projected_last+0];
+    float &y = projected[projected_last+1];
+
+    float w = clipped[v_id+3];
+    x = clipped[v_id+0]/w;
+    y = clipped[v_id+1]/w;
+
+    projected_last += 2;
+  }
+  int n_projected = projected_last/2;
 
   //data uploading
   this->shader.bind();
@@ -120,13 +141,14 @@ void AlmostGL::drawGL()
 
   //-- we unfortunately need to use uploadAttrib which will call glBufferData
   //-- under the hood. Using glBufferSubData() won't work.
-  Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(clipped, 4, n_clipped_vertices);
+  Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(projected, 2, n_projected);
   this->shader.uploadAttrib<Eigen::MatrixXf>("pos", to_gpu);
 
   //Z buffering
-  glEnable(GL_DEPTH_TEST);
+  //glEnable(GL_DEPTH_TEST);
 
   //Backface/Frontface culling
+  //glDisable(GL_CULL_FACE);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
   glFrontFace(param.front_face);

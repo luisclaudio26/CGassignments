@@ -1,7 +1,7 @@
 #version 450
 
 // from host
-in vec4 pos;
+in vec2 pos;
 in vec3 normal;
 in vec3 amb, diff, spec;
 in float shininess;
@@ -16,7 +16,9 @@ out vec3 f_normal;
 
 void main()
 {
-  gl_Position = pos;
+  gl_Position.xy = pos;
+  gl_Position.z = 1.0f;
+  gl_Position.w = 1.0f;
 
   //propagate variables
   //f_normal = (inverse(transpose(mvp))*vec4(normal, 0.0)).xyz;
