@@ -102,12 +102,12 @@ public:
                             } });
 
     Window *winAlmostGL = new Window(this, "AlmostGL");
-    winAlmostGL->setSize({960, 540});
+    winAlmostGL->setSize({480, 270});
     winAlmostGL->setPosition(Eigen::Vector2i(50,50));
     winAlmostGL->setLayout(new GroupLayout());
 
     mCanvas = new AlmostGL(param, path, winAlmostGL);
-    mCanvas->setSize({960,540});
+    mCanvas->setSize({480, 270});
 
     performLayout();
 
@@ -284,12 +284,19 @@ public:
                                       1.7777f,
                                       param.cam.near, param.cam.far);
 
-    glm::mat4 mvp_ = proj * view * param.model2world;
-    Eigen::Matrix4f mvp = Eigen::Map<Matrix4f>( glm::value_ptr(mvp_) );
+    //glm::mat4 mvp_ = proj * view * param.model2world;
+
+    Eigen::Matrix4f m = Eigen::Map<Matrix4f>(glm::value_ptr(param.model2world));
+    Eigen::Matrix4f v = Eigen::Map<Matrix4f>(glm::value_ptr(view));
+    Eigen::Matrix4f p = Eigen::Map<Matrix4f>(glm::value_ptr(proj));
+    Eigen::Matrix4f eye = Eigen::Map<Matrix4f>(glm::value_ptr(param.cam.eye));
 
     //actual drawing
     mShader.bind();
-    mShader.setUniform("mvp", mvp);
+    mShader.setUniform("model", m);
+    mShader.setUniform("view", v);
+    mShader.setUniform("proj", p);
+    mShader.setUniform("eye", eye);
     mShader.setUniform("model_color", param.model_color);
 
     //Z buffering

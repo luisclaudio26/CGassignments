@@ -6,7 +6,7 @@ in float f_shininess;
 in vec3 f_normal;
 
 // fragment final color
-out vec4 color;
+out vec4 color_out;
 
 // uniforms
 uniform vec4 model_color; //this sets a unique color for
@@ -15,5 +15,7 @@ uniform vec4 model_color; //this sets a unique color for
 
 void main()
 {
-  color = model_color;
+  //color = model_color;
+  vec3 color = f_amb + f_diff + f_spec;
+  color_out = vec4(color, 1.0f);
 }
