@@ -135,23 +135,48 @@ void AlmostGL::drawGL()
   }
   int n_projected = projected_last/2;
 
+  //triangle culling
+  int culled_last = 0;
+  for(int v_id = 0; v_id < projected_last; v_id += 6)
+  {
+    vec3 v0(projected[v_id+0], projected[v_id+1], 1.0f);
+    vec3 v1(projected[v_id+2], projected[v_id+3], 1.0f);
+    vec3 v2(projected[v_id+4], projected[v_id+5], 1.0f);
+
+    //compute cross product p = v0v1 X v0v2;
+    //if norm(p) > 0, v0v1v2 are defined in counter-clockwise
+    //order. then, reject or accept this triangle based
+    //on the param.front_face flag.
+    vec3 c = (v1-v0).cross(v2-v0);
+    float p = c.dot(c);
+
+    //cull clockwise triangles
+    if(c(2) < 0) continue;
+
+    //copy to final buffer
+    for(int i = 0; i < 6; ++i)
+      culled[culled_last+i] = projected[v_id+i];
+    culled_last += 6;
+  }
+  int n_culled = culled_last / 2;
+
   //data uploading
   this->shader.bind();
   this->shader.setUniform("model_color", param.model_color);
 
   //-- we unfortunately need to use uploadAttrib which will call glBufferData
   //-- under the hood. Using glBufferSubData() won't work.
-  Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(projected, 2, n_projected);
+  Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(culled, 2, n_culled);
   this->shader.uploadAttrib<Eigen::MatrixXf>("pos", to_gpu);
 
   //Z buffering
   //glEnable(GL_DEPTH_TEST);
 
   //Backface/Frontface culling
-  //glDisable(GL_CULL_FACE);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glFrontFace(param.front_face);
+  glDisable(GL_CULL_FACE);
+  //glEnable(GL_CULL_FACE);
+  //glCullFace(GL_BACK);
+  //glFrontFace(param.front_face);
 
   //draw mode
   glPolygonMode(GL_FRONT_AND_BACK, param.draw_mode);
