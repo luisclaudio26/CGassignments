@@ -160,23 +160,12 @@ void AlmostGL::drawGL()
   }
   int n_culled = culled_last / 2;
 
-  //data uploading
-  this->shader.bind();
-  this->shader.setUniform("model_color", param.model_color);
-
   //-- we unfortunately need to use uploadAttrib which will call glBufferData
   //-- under the hood. Using glBufferSubData() won't work.
+  this->shader.bind();
   Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(culled, 2, n_culled);
   this->shader.uploadAttrib<Eigen::MatrixXf>("pos", to_gpu);
-
-  //Z buffering
-  //glEnable(GL_DEPTH_TEST);
-
-  //Backface/Frontface culling
-  glDisable(GL_CULL_FACE);
-  //glEnable(GL_CULL_FACE);
-  //glCullFace(GL_BACK);
-  //glFrontFace(param.front_face);
+  this->shader.setUniform("model_color", param.model_color);
 
   //draw mode
   glPolygonMode(GL_FRONT_AND_BACK, param.draw_mode);
@@ -185,5 +174,4 @@ void AlmostGL::drawGL()
 
   //disable options
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  glDisable(GL_DEPTH_TEST);
 }
