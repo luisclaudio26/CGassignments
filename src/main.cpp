@@ -79,7 +79,7 @@ public:
 
     new Label(window, "Model color", "sans-bold");
     ColorPicker *color_picker = new ColorPicker(window, param.model_color);
-    color_picker->setFinalCallback([this](const Color& c) { this->param.model_color = c; });
+    color_picker->setFinalCallback([this](const Color& c) { this->param.model_color = c.head<3>(); });
 
     CheckBox *draw_cw = new CheckBox(window, "Draw triangles in CW order");
     draw_cw->setTooltip("Uncheck this box for drawing triangles in CCW order");
@@ -101,6 +101,15 @@ public:
                               case 2: param.draw_mode = GL_FILL; break;
                             } });
 
+    ComboBox *shading_model = new ComboBox(window, {"GouraudAD", "GouraudADS", "PhongADS"});
+    shading_model->setCallback([&](int opt) {
+                                switch(opt)
+                                {
+                                  case 0: param.shading = 0; break;
+                                  case 1: param.shading = 1; break;
+                                  case 2: param.shading = 2; break;
+                                } });
+
     Window *winAlmostGL = new Window(this, "AlmostGL");
     winAlmostGL->setSize({480, 270});
     winAlmostGL->setPosition(Eigen::Vector2i(50,50));
@@ -117,7 +126,7 @@ public:
     mMesh.load_file(path);
 
     mMesh.transform_to_center(param.model2world);
-    param.model_color<<0.0f, 1.0f, 0.0f, 1.0f;
+    param.model_color<<0.0f, 1.0f, 0.0f;
 
     printf("%s\n", glm::to_string(param.model2world).c_str());
 
@@ -150,6 +159,8 @@ public:
 
     //draw as filled polygons
     param.draw_mode = GL_POINTS;
+
+    param.shading = 0;
   }
 
   virtual void draw(NVGcontext *ctx)
@@ -297,7 +308,9 @@ public:
     mShader.setUniform("view", v);
     mShader.setUniform("proj", p);
     mShader.setUniform("eye", eye);
+    mShader.setUniform("light", Eigen::Vector3f(0.0f, 0.0f, 0.0f));
     mShader.setUniform("model_color", param.model_color);
+    mShader.setUniform("shadeId", param.shading);
 
     //Z buffering
     glEnable(GL_DEPTH_TEST);

@@ -18,12 +18,13 @@ struct GlobalParameters
   Camera cam;
 
   //model parameters
-  Eigen::Vector4f model_color;
+  Eigen::Vector3f model_color;
   glm::mat4 model2world;
 
   //general parameters
   GLenum front_face;
   GLenum draw_mode;
+  int shading;
 };
 
 #endif

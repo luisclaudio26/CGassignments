@@ -9,11 +9,11 @@ in vec3 f_normal;
 out vec4 color;
 
 // uniforms
-uniform vec4 model_color; //this sets a unique color for
+uniform vec3 model_color; //this sets a unique color for
                           //all triangles, as requested in
                           //the assignment
 
 void main()
 {
-  color = model_color;
+  color = vec4(model_color, 1.0f);
 }
