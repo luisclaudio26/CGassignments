@@ -152,7 +152,8 @@ void AlmostGL::drawGL()
     vec3 c = (v1-v0).cross(v2-v0);
 
     //cull clockwise triangles
-    if(c(2) < 0) continue;
+    if(param.front_face == GL_CCW && c(2) < 0 ||
+        param.front_face == GL_CW && c(2) > 0) continue;
 
     //copy to final buffer
     memcpy(&culled[culled_last], &projected[v_id], 6*sizeof(float));
