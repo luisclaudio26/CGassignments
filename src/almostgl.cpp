@@ -94,6 +94,9 @@ void AlmostGL::drawGL()
     {
       int v = 4*t_id + 4*v_id;
       float w = vbuffer[v+3];
+
+      if( w <= 0 ) discard_tri = true;
+
       if(std::fabs(vbuffer[v+0]) > w ||
           std::fabs(vbuffer[v+1]) > w ||
           std::fabs(vbuffer[v+2]) > w)
