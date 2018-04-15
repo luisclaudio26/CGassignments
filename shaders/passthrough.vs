@@ -27,15 +27,17 @@ void main()
   //Phong illumination model with Gouraud shading
   //Everything occurs in world space
   vec3 pos_worldspace = (model * vec4(pos, 1.0f)).xyz;
-  vec3 v2l = normalize(pos_worldspace - l);
+  vec3 v2l = normalize(l - pos_worldspace);
   vec3 v2e = normalize(eye - pos_worldspace);
+  vec3 h = normalize(v2l+v2e);
 
-  float diff_k = max(0.0f, dot(normal, v2l));
-  float spec_k = max(0.0f, pow(dot(reflect(v2l, normal), v2e), 3.0f));
+  float diff_k = max(0.0f, dot(-normal, v2l));
+  float spec_k = max(0.0f, pow(dot(h, -normal) ,15.0f));
+
 
   f_amb = amb;
-  f_diff = vec3(0.0f); //diff * diff_k;
-  f_spec = eye;
+  f_diff = diff * diff_k;
+  f_spec = spec * spec_k;
   f_shininess = shininess;
 
   //propagate variables

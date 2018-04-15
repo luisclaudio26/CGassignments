@@ -289,7 +289,7 @@ public:
     Eigen::Matrix4f m = Eigen::Map<Matrix4f>(glm::value_ptr(param.model2world));
     Eigen::Matrix4f v = Eigen::Map<Matrix4f>(glm::value_ptr(view));
     Eigen::Matrix4f p = Eigen::Map<Matrix4f>(glm::value_ptr(proj));
-    Eigen::Matrix4f eye = Eigen::Map<Matrix4f>(glm::value_ptr(param.cam.eye));
+    Eigen::Vector3f eye = Eigen::Map<Vector3f>(glm::value_ptr(param.cam.eye));
 
     //actual drawing
     mShader.bind();
