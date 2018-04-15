@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include <ctime>
 #include <iostream>
 
 #include <nanogui/opengl.h>
@@ -33,6 +34,9 @@ private:
   Mesh mMesh;
   AlmostGL *mCanvas;
 
+  nanogui::Label *framerate_open;
+  nanogui::Label *framerate_almost;
+
   GlobalParameters param;
 
 public:
@@ -43,7 +47,7 @@ public:
     //----------------------------------
     using namespace nanogui;
 
-    Window *window = new Window(this, "Scene options");
+    Window* window = new Window(this, "Scene options");
     window->setPosition(Vector2i(0, 0));
     window->setLayout(new GroupLayout());
 
@@ -109,6 +113,10 @@ public:
                                   case 1: param.shading = 1; break;
                                   case 2: param.shading = 2; break;
                                 } });
+
+    //framerate display
+    framerate_open = new Label(window, "framerate");
+    framerate_almost = new Label(window, "framerate");
 
     Window *winAlmostGL = new Window(this, "AlmostGL");
     winAlmostGL->setSize({480, 270});
@@ -285,6 +293,7 @@ public:
   virtual void drawContents()
   {
     using namespace nanogui;
+    float t = clock();
 
     //uniform uploading
     glm::mat4 view = glm::lookAt(param.cam.eye,
@@ -328,6 +337,11 @@ public:
     //disable options
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDisable(GL_DEPTH_TEST);
+
+    //framerate
+    t = clock() - t;
+    framerate_open->setCaption( "OpenGL: " + std::to_string(CLOCKS_PER_SEC/(float)t) );
+    framerate_almost->setCaption( "AlmostGL: " + std::to_string(mCanvas->framerate) );
   }
 };
 

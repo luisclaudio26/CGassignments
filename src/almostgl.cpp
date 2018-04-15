@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <nanogui/opengl.h>
 #include <cstring>
+#include <ctime>
 
 AlmostGL::AlmostGL(const GlobalParameters& param,
                     const char* path,
@@ -37,6 +38,7 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
 void AlmostGL::drawGL()
 {
   using namespace nanogui;
+  clock_t t = clock();
 
   //TODO: first stage of graphic pipeline
   //X 1) compute look_at matrix
@@ -172,4 +174,8 @@ void AlmostGL::drawGL()
 
   //disable options
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  //compute time
+  t = clock() - t;
+  this->framerate = CLOCKS_PER_SEC/(float)t;
 }

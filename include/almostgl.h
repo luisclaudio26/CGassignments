@@ -26,6 +26,8 @@ public:
             Widget *parent);
   ~AlmostGL() { delete[] vbuffer, clipped, culled, projected; }
 
+  float framerate;
+
   void drawGL() override;
 };
 
