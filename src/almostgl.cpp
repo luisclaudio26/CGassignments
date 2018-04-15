@@ -60,13 +60,13 @@ void AlmostGL::drawGL()
   //important matrices
   mat4 view = mat4::view(eye, eye+look_dir, up);
   mat4 proj = mat4::perspective(param.cam.FoV, 1.7777f, param.cam.near, param.cam.far);
-  mat4 mvp_ = proj * view * model2world;
+  mat4 mvp = proj * view * model2world;
 
   //geometric transformations
   for(int v_id = 0; v_id < model.mPos.cols(); ++v_id)
   {
     Eigen::Vector3f v = model.mPos.col(v_id);
-    vec4 v_ = mvp_ * vec4(v(0), v(1), v(2), 1.0f);
+    vec4 v_ = mvp * vec4(v(0), v(1), v(2), 1.0f);
 
     //copy to vbuffer
     for(int i = 0; i < 4; ++i)
@@ -79,7 +79,9 @@ void AlmostGL::drawGL()
   //then this vertex is outside the view frustum. Although the correct
   //way of handling this would be to clip the triangle, we'll just
   //discard it entirely.
-  int clipped_last = 0; memset(clipped, 0, sizeof(float)*model.mPos.cols()*4);
+  int clipped_last = 0;
+  memset(clipped, 0, sizeof(float)*model.mPos.cols()*4);
+
   for(int t_id = 0; t_id < model.mPos.cols(); t_id += 3)
   {
     bool discard_tri = false;
@@ -90,7 +92,7 @@ void AlmostGL::drawGL()
     //frustum is translated?!
     for(int v_id = 0; v_id < 3; ++v_id)
     {
-      int v = 12*t_id + 4*v_id;
+      int v = 4*t_id + 4*v_id;
       float w = vbuffer[v+3];
       if(std::fabs(vbuffer[v+0]) > w ||
           std::fabs(vbuffer[v+1]) > w ||

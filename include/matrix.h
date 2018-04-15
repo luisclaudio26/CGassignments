@@ -107,6 +107,7 @@ public:
       //so that the mapped points (after division by w) are within the cube
       //of corners (-1,-1,-1) (1,1,1)
       float alpha = (near+far)/(near-far), beta = (2*near*far)/(near-far);
+      //float alpha = far/(near-far), beta = (near*far)/(near-far);
       mat4 norm = mat4( vec4(1.0f, 0.0f, 0.0f, 0.0f),
                         vec4(0.0f, 1.0f, 0.0f, 0.0f),
                         vec4(0.0f, 0.0f, alpha, -1.0f),
