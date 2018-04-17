@@ -82,7 +82,7 @@ public:
       float t = tan(fov_ * PI / 180.0f) * near; float b = -t;
       float r = t * aspect_ratio; float l = -r;
 
-      //shearing matrix. TODO: we don't actually need this in this version,
+      //shearing matrix. TODO: we don't really need this in this version,
       //only for skewed frustums
       float g = (l+r)/(2*near), h = (t+b)/(2*near);
       mat4 shear = mat4( vec4(1.0f, 0.0f, 0.0f, 0.0f),

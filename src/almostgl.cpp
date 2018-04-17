@@ -91,8 +91,6 @@ void AlmostGL::drawGL()
 
     //loop over vertices of this triangle. if any of them
     //is outside the view frustum, discard it
-    //TODO: this is discading too many triangles; maybe because
-    //frustum is translated?!
     for(int v_id = 0; v_id < 3; ++v_id)
     {
       int v = 4*t_id + 4*v_id;
