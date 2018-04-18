@@ -308,10 +308,6 @@ public:
                                   param.cam.eye + param.cam.look_dir,
                                   param.cam.up);
 
-    /*
-    glm::mat4 proj = glm::perspective(glm::radians(param.cam.FoV),
-                                      1.7777f,
-                                      param.cam.near, param.cam.far); */
     float t = tan( glm::radians(param.cam.FoVy/2) ), b = -t;
     float r = tan( glm::radians(param.cam.FoVx/2) ), l = -r;
     glm::mat4 proj = glm::frustum(l, r, b, t, param.cam.near, param.cam.far);
@@ -350,7 +346,7 @@ public:
 
     //framerate
     start = clock() - start;
-    framerate_open->setCaption( "OpenGL: " + std::to_string(CLOCKS_PER_SEC/(float)t) );
+    framerate_open->setCaption( "OpenGL: " + std::to_string(CLOCKS_PER_SEC/(float)start) );
     framerate_almost->setCaption( "AlmostGL: " + std::to_string(mCanvas->framerate) );
   }
 };
