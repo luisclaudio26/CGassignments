@@ -9,7 +9,7 @@ struct Camera
 {
   //Camera parameters
   glm::vec3 eye, look_dir, up, right;
-  float near, far, step, FoV;
+  float near, far, step, FoVy, FoVx;
   bool lock_view;
 };
 

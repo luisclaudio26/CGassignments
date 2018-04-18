@@ -44,10 +44,10 @@ void AlmostGL::drawGL()
   //X 1) compute look_at matrix
   //X 2) precompute mvp = proj * view * model
   //X 3) transform each vertex v = mvp * v;
-  //4) divide by w
-  //5) loop through primitives and discard those outside
-  //   the canonical view cube (clipping)
-  //6) send the remaining vertices to the passthrough vertex shader
+  //X 4) divide by w
+  //X 5) loop through primitives and discard those outside
+  //      the canonical view cube (clipping)
+  //X 6) send the remaining vertices to the passthrough vertex shader
 
   //convert params to use internal library
   vec3 eye = vec3(param.cam.eye[0], param.cam.eye[1], param.cam.eye[2]);
@@ -62,7 +62,7 @@ void AlmostGL::drawGL()
 
   //important matrices
   mat4 view = mat4::view(eye, eye+look_dir, up);
-  mat4 proj = mat4::perspective(param.cam.FoV, 1.7777f, param.cam.near, param.cam.far);
+  mat4 proj = mat4::perspective(param.cam.FoVy, param.cam.FoVx, param.cam.near, param.cam.far);
   mat4 mvp = proj * view * model2world;
 
   //geometric transformations

@@ -41,6 +41,11 @@ vec3 phong()
   return lerp_amb + model_color * diff_k + vec3(1.0f) * spec_k;
 }
 
+vec3 no_shade()
+{
+  return model_color;
+}
+
 void main()
 {
   vec3 color;
@@ -49,6 +54,7 @@ void main()
     case 0: color = gouraudAD(); break;
     case 1: color = gouraudADS(); break;
     case 2: color = phong(); break;
+    case 3: color = no_shade(); break;
   }
 
   color_out = vec4(color, 1.0f);

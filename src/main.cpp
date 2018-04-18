@@ -58,7 +58,7 @@ public:
                                       param.cam.right = glm::vec3(1.0f, 0.0f, 0.0f);
                                       param.cam.eye = glm::vec3(0.0f, 0.0f, 0.0f);
                                       param.cam.near = 1.0f; param.cam.far = 10.0f;
-                                      param.cam.FoV = 45.0f; });
+                                      param.cam.FoVy = 45.0f; param.cam.FoVx = 45.0f; });
 
     new Label(window, "Near Z plane", "sans-bold");
 
@@ -74,12 +74,19 @@ public:
     far_plane->setTooltip("Set near Z plane to any value between 10 and 100");
     far_plane->setCallback( [this](float val) { param.cam.far = 10.0f + val * (100.0f - 10.0f); } );
 
-    new Label(window, "Field of view (deg)", "sans-bold");
+    new Label(window, "Field of view y (deg)", "sans-bold");
 
-    Slider *fov = new Slider(window);
-    fov->setFixedWidth(100);
-    fov->setTooltip("Set the field of view to any value between 5 and 150");
-    fov->setCallback( [this](float val) { param.cam.FoV = 5.0f + val * (150.0f - 5.0f); } );
+    Slider *fovy = new Slider(window);
+    fovy->setFixedWidth(100);
+    fovy->setTooltip("Set the field of view in Y to any value between 2 and 150");
+    fovy->setCallback( [this](float val) { param.cam.FoVy = 2.0f + val * (150.0f - 2.0f); } );
+
+    new Label(window, "Field of view x (deg)", "sans-bold");
+
+    Slider *fovx = new Slider(window);
+    fovx->setFixedWidth(100);
+    fovx->setTooltip("Set the field of view in x to any value between 2 and 150");
+    fovx->setCallback( [this](float val) { param.cam.FoVx = 2.0f + val * (150.0f - 2.0f); } );
 
     new Label(window, "Model color", "sans-bold");
     ColorPicker *color_picker = new ColorPicker(window, param.model_color);
@@ -105,13 +112,14 @@ public:
                               case 2: param.draw_mode = GL_FILL; break;
                             } });
 
-    ComboBox *shading_model = new ComboBox(window, {"GouraudAD", "GouraudADS", "PhongADS"});
+    ComboBox *shading_model = new ComboBox(window, {"GouraudAD", "GouraudADS", "PhongADS", "No shading"});
     shading_model->setCallback([&](int opt) {
                                 switch(opt)
                                 {
                                   case 0: param.shading = 0; break;
                                   case 1: param.shading = 1; break;
                                   case 2: param.shading = 2; break;
+                                  case 3: param.shading = 3; break;
                                 } });
 
     //framerate display
@@ -144,7 +152,7 @@ public:
     param.cam.right = glm::vec3(1.0f, 0.0f, 0.0f);
     param.cam.near = 1.0f; param.cam.far = 10.0f;
     param.cam.step = 0.1f;
-    param.cam.FoV = 45.0f;
+    param.cam.FoVy = 45.0f, param.cam.FoVx = 45.0f;
     param.cam.lock_view = false;
 
     //--------------------------------------
@@ -293,18 +301,20 @@ public:
   virtual void drawContents()
   {
     using namespace nanogui;
-    float t = clock();
+    clock_t start = clock();
 
     //uniform uploading
     glm::mat4 view = glm::lookAt(param.cam.eye,
                                   param.cam.eye + param.cam.look_dir,
                                   param.cam.up);
 
+    /*
     glm::mat4 proj = glm::perspective(glm::radians(param.cam.FoV),
                                       1.7777f,
-                                      param.cam.near, param.cam.far);
-
-    //glm::mat4 mvp_ = proj * view * param.model2world;
+                                      param.cam.near, param.cam.far); */
+    float t = tan( glm::radians(param.cam.FoVy/2) ), b = -t;
+    float r = tan( glm::radians(param.cam.FoVx/2) ), l = -r;
+    glm::mat4 proj = glm::frustum(l, r, b, t, param.cam.near, param.cam.far);
 
     Eigen::Matrix4f m = Eigen::Map<Matrix4f>(glm::value_ptr(param.model2world));
     Eigen::Matrix4f v = Eigen::Map<Matrix4f>(glm::value_ptr(view));
@@ -339,7 +349,7 @@ public:
     glDisable(GL_DEPTH_TEST);
 
     //framerate
-    t = clock() - t;
+    start = clock() - start;
     framerate_open->setCaption( "OpenGL: " + std::to_string(CLOCKS_PER_SEC/(float)t) );
     framerate_almost->setCaption( "AlmostGL: " + std::to_string(mCanvas->framerate) );
   }
