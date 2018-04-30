@@ -2,6 +2,18 @@
 #include <cmath>
 
 //---------------------------------
+//-------------- vec2 -------------
+//---------------------------------
+vec2::vec2()                  { e[0] = e[1] = 0.0f; }
+vec2::vec2(float x, float y)  { e[0] = x; e[1] = y;}
+float vec2::operator()(int i) const { return e[i]; }
+float& vec2::operator()(int i) { return e[i]; }
+vec2 vec2::operator-(const vec2& rhs) const
+{
+  return vec2(e[0]-rhs(0), e[1]-rhs(1));
+}
+
+//---------------------------------
 //-------------- vec3 -------------
 //---------------------------------
 vec3::vec3() { for(int i = 0; i < 3; ++i) e[i] = 0.0f; }

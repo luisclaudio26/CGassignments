@@ -84,11 +84,13 @@ void AlmostGL::drawGL()
     for(int j = 0; j < 4; ++j)
       model2world(i,j) = param.model2world[j][i];
 
-  //important matrices
+  //important matrices.
+  //proj and viewport could be precomputed!
   mat4 view = mat4::view(eye, eye+look_dir, up);
   mat4 proj = mat4::perspective(param.cam.FoVy, param.cam.FoVx,
                                 param.cam.near, param.cam.far);
   mat4 mvp = proj * view * model2world;
+  mat4 viewport = mat4::viewport(buffer_width, buffer_height);
 
   //geometric transformations
   for(int v_id = 0; v_id < model.mPos.cols(); ++v_id)
@@ -107,9 +109,8 @@ void AlmostGL::drawGL()
   //then this vertex is outside the view frustum. Although the correct
   //way of handling this would be to clip the triangle, we'll just
   //discard it entirely.
-  int clipped_last = 0;
   memset(clipped, 0, sizeof(float)*model.mPos.cols()*4);
-
+  int clipped_last = 0;
   for(int t_id = 0; t_id < model.mPos.cols(); t_id += 3)
   {
     bool discard_tri = false;
@@ -158,7 +159,6 @@ void AlmostGL::drawGL()
 
     projected_last += 2;
   }
-  int n_projected = projected_last/2;
 
   //triangle culling
   int culled_last = 0;
@@ -182,14 +182,50 @@ void AlmostGL::drawGL()
     memcpy(&culled[culled_last], &projected[v_id], 6*sizeof(float));
     culled_last += 6;
   }
-  int n_culled = culled_last / 2;
 
   //rasterization
   #define PIXEL(i,j) (4*(i*buffer_width+j))
   #define SET_PIXEL(i,j,r,g,b) { color[PIXEL(i,j)+0] = r; \
                                  color[PIXEL(i,j)+1] = g; \
-                                 color[PIXEL(i,j)+2] = b; }
+                                 color[PIXEL(i,j)+2] = b; \
+                                 color[PIXEL(i,j)+3] = 255;}
 
+   //clear color buffer
+   memset((void*)color, 0, (4*buffer_width*buffer_height)*sizeof(GLubyte));
+
+  for(int p_id = 0; p_id < culled_last; p_id += 6)
+  {
+    //apply viewport transformation to each vertex
+    vec4 v0_ = viewport*vec4(culled[p_id+0], culled[p_id+1], 1.0f, 1.0f);
+    vec4 v1_ = viewport*vec4(culled[p_id+2], culled[p_id+3], 1.0f, 1.0f);
+    vec4 v2_ = viewport*vec4(culled[p_id+4], culled[p_id+5], 1.0f, 1.0f);
+
+    vec2 v0(v0_(0), v0_(1));
+    vec2 v1(v1_(0), v1_(1));
+    vec2 v2(v2_(0), v2_(1));
+
+    //order triangles by y coordinate
+    #define SWAP(a,b) { vec2 aux = b; b = a; a = aux; }
+    if( v0(1) > v1(1) ) SWAP(v0, v1);
+    if( v0(1) > v2(1) ) SWAP(v0, v2);
+    if( v1(1) > v2(1) ) SWAP(v1, v2);
+
+    //define increments
+    float e0dx = (v1(0)-v0(0))/(v1(1)-v0(1));
+    float e1dx = (v2(0)-v0(0))/(v2(1)-v0(1));
+    float start = v0(0), end = v0(0);
+
+    //loop from v0 to the vertex in the middle,
+    //drawing the first "half" of the triangle
+    #define ROUND(x) ((int)(x + 0.5f))
+    for(int y = ROUND(v0(1)); y < ROUND(v1(1)); ++y)
+    {
+      for(int x = ROUND(start); x < ROUND(end); ++x)
+        SET_PIXEL(y, x, 255, 255, 255);
+
+      start += e0dx; end += e1dx;
+    }
+  }
 
   // send to GPU in texture unit 0
   glActiveTexture(GL_TEXTURE0);
@@ -210,8 +246,6 @@ void AlmostGL::drawGL()
                 color);
 
   //WARNING: IF WE DON'T SET THIS IT WON'T WORK!
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 

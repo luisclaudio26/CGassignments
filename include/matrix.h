@@ -5,6 +5,20 @@
 
 #define PI 3.14159265f
 
+class vec2
+{
+private:
+  float e[2];
+
+public:
+  vec2();
+  vec2(float x, float y);
+
+  float operator()(int i) const;
+  float& operator()(int i);
+  vec2 operator-(const vec2& rhs) const;
+};
+
 class vec3
 {
 private:
@@ -62,6 +76,32 @@ public:
   vec4 operator*(const vec4& rhs) const;
 
   //--------- Matrix constructors ---------
+  static mat4 viewport(int width, int height)
+  {
+      //translate from [-1,1]² to [0,2]²
+      //this also flips de Y coordinates, which is
+      //necessary because device coordinate system
+      //has its origin in top-left corner
+      mat4 to_origin(vec4(1.0f, 0.0f, 0.0f, 0.0f),
+                      vec4(0.0f, -1.0f, 0.0f, 0.0f),
+                      vec4(0.0f, 0.0f, 1.0f, 0.0f),
+                      vec4(1.0f, 1.0f, 0.0f, 1.0f));
+
+      //scale from [0,2]² to [0,1]²
+      mat4 to_unit(vec4(0.5f, 0.0f, 0.0f, 0.0f),
+                    vec4(0.0f, 0.5f, 0.0f, 0.0f),
+                    vec4(0.0f, 0.0f, 1.0f, 0.0f),
+                    vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+      //rescale from [0,1]² to [0,w] x [0,h]
+      mat4 rescale(vec4(width, 0.0f, 0.0f, 0.0f),
+                    vec4(0.0f, height, 0.0f, 0.0f),
+                    vec4(0.0f, 0.0f, 1.0f, 0.0f),
+                    vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+      return rescale * to_unit * to_origin;
+  }
+
   static mat4 view(const vec3& eye, const vec3& look_at, const vec3& up)
   {
     vec3 w = (eye-look_at).unit(); //translation is inverted in the end. check this!
