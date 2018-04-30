@@ -56,7 +56,7 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
 
   buffer_height = this->height(); buffer_width = this->width();
   int n_pixels = buffer_width * buffer_height;
-  
+
   color = new GLubyte[4*n_pixels];
   for(int i = 0; i < n_pixels*4; i += 4) color[i] = 0;
   for(int i = 1; i < n_pixels*4; i += 4) color[i] = 0;
@@ -185,12 +185,19 @@ void AlmostGL::drawGL()
   int n_culled = culled_last / 2;
 
   //rasterization
-  #define PIXEL(i,j) (i*buffer_width+j)
+  #define PIXEL(i,j) (4*(i*buffer_width+j))
+  #define SET_PIXEL(i,j,r,g,b) { color[PIXEL(i,j)+0] = r; \
+                                 color[PIXEL(i,j)+1] = g; \
+                                 color[PIXEL(i,j)+2] = b; }
+
 
   // send to GPU in texture unit 0
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, color_gpu);
 
+  //WARNING: be careful with RGB pixel data as OpenGL
+  //expects 4-byte aligned data
+  //https://www.khronos.org/opengl/wiki/Common_Mistakes#Texture_upload_and_pixel_reads
   glPixelStorei(GL_UNPACK_LSB_FIRST, 0);
   glTexImage2D(GL_TEXTURE_2D,
                 0,
