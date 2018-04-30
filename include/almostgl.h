@@ -10,13 +10,22 @@
 #include "../include/mesh.h"
 #include "../include/param.h"
 
+typedef unsigned char uchar;
+
 class AlmostGL : public nanogui::GLCanvas
 {
 private:
   nanogui::GLShader shader;
   Mesh model;
 
+  //vertex buffers
   float *vbuffer, *clipped, *culled, *projected;
+
+  //pixel buffers
+  int buffer_height, buffer_width;
+  uchar *color; float *depth;
+
+  GLuint color_gpu;
 
   const GlobalParameters& param;
 

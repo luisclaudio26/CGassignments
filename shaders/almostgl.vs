@@ -6,10 +6,14 @@ in vec3 normal;
 in vec3 amb, diff, spec;
 in float shininess;
 
+in vec2 quad_uv;
+
 // to fragment shader
 out vec3 f_amb, f_diff, f_spec;
 out float f_shininess;
 out vec3 f_normal;
+
+out vec2 uv_frag;
 
 // uniform variables
 //uniform mat4 mvp;
@@ -25,4 +29,6 @@ void main()
   f_normal = normal;
   f_amb = amb; f_diff = diff; f_spec = spec;
   f_shininess = shininess;
+
+  uv_frag = quad_uv;
 }

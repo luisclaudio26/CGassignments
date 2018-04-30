@@ -27,27 +27,37 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   this->shader.uploadAttrib<Eigen::MatrixXf>("spec", this->model.mSpec);
   this->shader.uploadAttrib<Eigen::MatrixXf>("shininess", this->model.mShininess);
 
+  Eigen::MatrixXf texcoord(2, 6);
+  texcoord.col(0)<<-1.0, -1.0;
+  texcoord.col(1)<<+1.0, -1.0;
+  texcoord.col(2)<<+1.0, +1.0;
+  texcoord.col(3)<<-1.0, -1.0;
+  texcoord.col(4)<<+1.0, +1.0;
+  texcoord.col(5)<<-1.0, +1.0;
+  this->shader.uploadAttrib<Eigen::MatrixXf>("quad_uv", texcoord);
+
   //preallocate buffers where we'll store the transformed,
   //clipped and culled vertices (triangles) before copying them to the GPU
   vbuffer = new float[model.mPos.cols()*4];
   clipped = new float[model.mPos.cols()*4];
   projected = new float[model.mPos.cols()*2];
   culled = new float[model.mPos.cols()*2];
+
+  //preallocate color and depth buffers with the
+  //initial window size. this will once we resize the window!
+  buffer_height = this->height(); buffer_width = this->width();
+  int n_pixels = buffer_width * buffer_height;
+
+  color = new uchar[n_pixels];
+  depth = new float[n_pixels];
+
+  glGenTextures(1, &color_gpu);
 }
 
 void AlmostGL::drawGL()
 {
   using namespace nanogui;
   clock_t t = clock();
-
-  //TODO: first stage of graphic pipeline
-  //X 1) compute look_at matrix
-  //X 2) precompute mvp = proj * view * model
-  //X 3) transform each vertex v = mvp * v;
-  //X 4) divide by w
-  //X 5) loop through primitives and discard those outside
-  //      the canonical view cube (clipping)
-  //X 6) send the remaining vertices to the passthrough vertex shader
 
   //convert params to use internal library
   vec3 eye = vec3(param.cam.eye[0], param.cam.eye[1], param.cam.eye[2]);
@@ -159,19 +169,33 @@ void AlmostGL::drawGL()
   }
   int n_culled = culled_last / 2;
 
+  //rasterization
+  #define PIXEL(i,j) (i*buffer_width+j)
+
+  // send to GPU in texture unit 0
+  glActiveTexture(0);
+  glBindTexture(GL_TEXTURE_2D, color_gpu);
+  glTexImage2D(GL_TEXTURE_2D,
+  	           0,
+               GL_RGB,
+               buffer_width,
+               buffer_height,
+               0,
+               GL_RGB,
+               GL_UNSIGNED_BYTE,
+               color);
+
   //-- we unfortunately need to use uploadAttrib which will call glBufferData
   //-- under the hood. Using glBufferSubData() won't work.
   this->shader.bind();
   Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(culled, 2, n_culled);
   this->shader.uploadAttrib<Eigen::MatrixXf>("pos", to_gpu);
   this->shader.setUniform("model_color", param.model_color);
+  this->shader.setUniform("frame", 0);
 
-  //draw mode
+  //draw stuff
   glPolygonMode(GL_FRONT_AND_BACK, param.draw_mode);
-
   this->shader.drawArray(GL_TRIANGLES, 0, this->model.mPos.cols());
-
-  //disable options
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
   //compute time
