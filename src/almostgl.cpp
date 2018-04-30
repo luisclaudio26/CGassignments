@@ -193,39 +193,112 @@ void AlmostGL::drawGL()
    //clear color buffer
    memset((void*)color, 0, (4*buffer_width*buffer_height)*sizeof(GLubyte));
 
-  for(int p_id = 0; p_id < culled_last; p_id += 6)
-  {
-    //apply viewport transformation to each vertex
-    vec4 v0_ = viewport*vec4(culled[p_id+0], culled[p_id+1], 1.0f, 1.0f);
-    vec4 v1_ = viewport*vec4(culled[p_id+2], culled[p_id+3], 1.0f, 1.0f);
-    vec4 v2_ = viewport*vec4(culled[p_id+4], culled[p_id+5], 1.0f, 1.0f);
+   for(int p_id = 0; p_id < culled_last; p_id += 6)
+   {
+     //apply viewport transformation to each vertex
+     vec4 v0_ = viewport*vec4(culled[p_id+0], culled[p_id+1], 1.0f, 1.0f);
+     vec4 v1_ = viewport*vec4(culled[p_id+2], culled[p_id+3], 1.0f, 1.0f);
+     vec4 v2_ = viewport*vec4(culled[p_id+4], culled[p_id+5], 1.0f, 1.0f);
 
-    vec2 v0(v0_(0), v0_(1));
-    vec2 v1(v1_(0), v1_(1));
-    vec2 v2(v2_(0), v2_(1));
+     vec2 v0(v0_(0), v0_(1));
+     vec2 v1(v1_(0), v1_(1));
+     vec2 v2(v2_(0), v2_(1));
 
-    //order triangles by y coordinate
-    #define SWAP(a,b) { vec2 aux = b; b = a; a = aux; }
-    if( v0(1) > v1(1) ) SWAP(v0, v1);
-    if( v0(1) > v2(1) ) SWAP(v0, v2);
-    if( v1(1) > v2(1) ) SWAP(v1, v2);
+     //order triangles by y coordinate
+     #define SWAP(a,b) { vec2 aux = b; b = a; a = aux; }
+     if( v0(1) > v1(1) ) SWAP(v0, v1);
+     if( v0(1) > v2(1) ) SWAP(v0, v2);
+     if( v1(1) > v2(1) ) SWAP(v1, v2);
 
-    //define increments
-    float e0dx = (v1(0)-v0(0))/(v1(1)-v0(1));
-    float e1dx = (v2(0)-v0(0))/(v2(1)-v0(1));
-    float start = v0(0), end = v0(0);
+     #define ROUND(x) ((int)(x + 0.5f))
+     //loop from v0 to the vertex in the middle,
+     //drawing the first "half" of the triangle
+     float start = v0(0), end = v0(0);
 
-    //loop from v0 to the vertex in the middle,
-    //drawing the first "half" of the triangle
-    #define ROUND(x) ((int)(x + 0.5f))
-    for(int y = ROUND(v0(1)); y < ROUND(v1(1)); ++y)
-    {
-      for(int x = ROUND(start); x < ROUND(end); ++x)
-        SET_PIXEL(y, x, 255, 255, 255);
+     float e0dx = (v1(0)-v0(0))/(v1(1)-v0(1));
+     float e1dx = (v2(0)-v0(0))/(v2(1)-v0(1));
+     float start_dx, end_dx;
 
-      start += e0dx; end += e1dx;
-    }
-  }
+     //TODO: find a more compact expression for this
+     /*
+     if(v1(0) == v2(0))
+     {
+       if(v1(0) < v0(0))
+       {
+         start_dx = e0dx;
+         end_dx = e1dx;
+       }
+       else
+       {
+         start_dx = e1dx;
+         end_dx = e0dx;
+       }
+     }
+     else if(v1(0) < v2(0))
+     {
+       start_dx = e0dx;
+       end_dx = e1dx;
+     }
+     else if(v1(0) > v2(0))
+     {
+       start_dx = e1dx;
+       end_dx = e0dx;
+     } */
+     if(v1(0) < v2(0))
+     {
+       start_dx = e0dx;
+       end_dx = e1dx;
+     }
+     else if(v1(0) > v2(0))
+     {
+       start_dx = e1dx;
+       end_dx = e0dx;
+     }
+
+     /*
+     for(int y = ROUND(v0(1)); y < ROUND(v1(1)); ++y)
+     {
+       for(int x = ROUND(start); x < ROUND(end); ++x)
+         SET_PIXEL(y, x, 255, 255, 255);
+       start += start_dx; end += end_dx;
+     }
+
+     //loop over second half
+     float e2dx = (v2(0)-v1(0))/(v2(1)-v1(1));
+     if(v1(0) < v2(0)) start_dx = e2dx;
+     else end_dx = e2dx;
+
+     for(int y = ROUND(v1(1)); y < ROUND(v2(1)); ++y)
+     {
+       for(int x = ROUND(start); x < ROUND(end); ++x)
+         SET_PIXEL(y, x, 255, 255, 255);
+       start += start_dx; end += end_dx;
+     } */
+
+     for(int y = ROUND(v0(1)); y < ROUND(v2(1)); ++y)
+     {
+       //rasterize scanline
+       for(int x = ROUND(start); x < ROUND(end); ++x)
+         SET_PIXEL(y, x, 255, 255, 255);
+
+       //switch active edge if we reached halfway the triangle
+       if( y == ROUND(v1(1)) )
+       {
+         float dy_v2v1 = v2(1)-v1(1);
+
+         //just ignore the last scanline if edge is horizontal
+         if(dy_v2v1 == 0.0f) break;
+
+         float e2dx = (v2(0)-v1(0))/dy_v2v1;
+         if(v1(0) < v2(0)) start_dx = e2dx;
+         else end_dx = e2dx;
+       }
+
+       //compute increments for the next scanline bounds
+       start += start_dx; end += end_dx;
+     }
+
+   }
 
   // send to GPU in texture unit 0
   glActiveTexture(GL_TEXTURE0);
