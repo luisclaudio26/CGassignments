@@ -23,7 +23,7 @@ private:
 
   //pixel buffers
   int buffer_height, buffer_width;
-  uchar *color; float *depth;
+  GLubyte *color; float *depth;
 
   GLuint color_gpu;
 

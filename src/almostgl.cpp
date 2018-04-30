@@ -29,9 +29,19 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   quad.col(4)<<+1.0, +1.0;
   quad.col(5)<<-1.0, +1.0;
 
+  //for some reason, OpenGL inverts the v axis,
+  //so we undo this here
+  Eigen::MatrixXf texcoord(2, 6);
+  texcoord.col(0)<<0.0f, 1.0f;
+  texcoord.col(1)<<1.0f, 1.0f;
+  texcoord.col(2)<<1.0f, 0.0f;
+  texcoord.col(3)<<0.0f, 1.0f;
+  texcoord.col(4)<<1.0f, 0.0f;
+  texcoord.col(5)<<0.0f, 0.0f;
+
   this->shader.bind();
-  this->shader.uploadAttrib<Eigen::MatrixXf>("quad_uv", quad);
   this->shader.uploadAttrib<Eigen::MatrixXf>("quad_pos", quad);
+  this->shader.uploadAttrib<Eigen::MatrixXf>("quad_uv", texcoord);
 
   //preallocate buffers where we'll store the transformed,
   //clipped and culled vertices (triangles) before copying them to the GPU
@@ -45,10 +55,15 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   glGenTextures(1, &color_gpu);
 
   buffer_height = this->height(); buffer_width = this->width();
-  int n_pixels = 3 * buffer_width * buffer_height;
+  int n_pixels = buffer_width * buffer_height;
+  
+  color = new GLubyte[4*n_pixels];
+  for(int i = 0; i < n_pixels*4; i += 4) color[i] = 0;
+  for(int i = 1; i < n_pixels*4; i += 4) color[i] = 0;
+  for(int i = 2; i < n_pixels*4; i += 4) color[i] = 30;
+  for(int i = 3; i < n_pixels*4; i += 4) color[i] = 255;
 
-  color = new uchar[n_pixels]; depth = new float[n_pixels];
-  for(int i = 0; i < n_pixels; ++i) color[i] = 255;
+  depth = new float[n_pixels];
 }
 
 void AlmostGL::drawGL()
@@ -60,7 +75,9 @@ void AlmostGL::drawGL()
   vec3 eye = vec3(param.cam.eye[0], param.cam.eye[1], param.cam.eye[2]);
   vec3 up = vec3(param.cam.up[0], param.cam.up[1], param.cam.up[2]);
   vec3 right = vec3(param.cam.right[0], param.cam.right[1], param.cam.right[2]);
-  vec3 look_dir = vec3(param.cam.look_dir[0], param.cam.look_dir[1], param.cam.look_dir[2]);
+  vec3 look_dir = vec3(param.cam.look_dir[0],
+                        param.cam.look_dir[1],
+                        param.cam.look_dir[2]);
 
   mat4 model2world;
   for(int i = 0; i < 4; ++i)
@@ -69,7 +86,8 @@ void AlmostGL::drawGL()
 
   //important matrices
   mat4 view = mat4::view(eye, eye+look_dir, up);
-  mat4 proj = mat4::perspective(param.cam.FoVy, param.cam.FoVx, param.cam.near, param.cam.far);
+  mat4 proj = mat4::perspective(param.cam.FoVy, param.cam.FoVx,
+                                param.cam.near, param.cam.far);
   mat4 mvp = proj * view * model2world;
 
   //geometric transformations
@@ -170,30 +188,34 @@ void AlmostGL::drawGL()
   #define PIXEL(i,j) (i*buffer_width+j)
 
   // send to GPU in texture unit 0
-  glActiveTexture(0);
+  glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, color_gpu);
-  glTexImage2D(GL_TEXTURE_2D,
-  	           0,
-               GL_RGB,
-               buffer_width,
-               buffer_height,
-               0,
-               GL_RGB,
-               GL_UNSIGNED_BYTE,
-               color);
 
+  glPixelStorei(GL_UNPACK_LSB_FIRST, 0);
+  glTexImage2D(GL_TEXTURE_2D,
+                0,
+                GL_RGBA8,
+                buffer_width,
+                buffer_height,
+                0,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                color);
+
+  //WARNING: IF WE DON'T SET THIS IT WON'T WORK!
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
   //-- we unfortunately need to use uploadAttrib which will call glBufferData
   //-- under the hood. Using glBufferSubData() won't work.
   this->shader.bind();
-  Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(culled, 2, n_culled);
   this->shader.setUniform("frame", 0);
 
   //draw stuff
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  this->shader.drawArray(GL_TRIANGLES, 0, this->model.mPos.cols());
+  this->shader.drawArray(GL_TRIANGLES, 0, 6);
 
   //compute time
   t = clock() - t;

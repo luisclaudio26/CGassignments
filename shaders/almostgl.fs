@@ -11,6 +11,5 @@ uniform sampler2D frame;
 
 void main()
 {
-  color.xyz = texture(frame, uv_frag).xyz;
-  color.w = 1.0f;
+  color = texture(frame, uv_frag);
 }
