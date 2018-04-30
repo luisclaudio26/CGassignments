@@ -19,22 +19,19 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
                               "../shaders/almostgl.vs",
                               "../shaders/almostgl.fs");
 
-  this->shader.bind();
-  this->shader.uploadAttrib<Eigen::MatrixXf>("pos", this->model.mPos);
-  this->shader.uploadAttrib<Eigen::MatrixXf>("normal", this->model.mNormal);
-  this->shader.uploadAttrib<Eigen::MatrixXf>("amb", this->model.mAmb);
-  this->shader.uploadAttrib<Eigen::MatrixXf>("diff", this->model.mDiff);
-  this->shader.uploadAttrib<Eigen::MatrixXf>("spec", this->model.mSpec);
-  this->shader.uploadAttrib<Eigen::MatrixXf>("shininess", this->model.mShininess);
+  //this will serve us both as screen coordinates for the quad
+  //AND texture coordinates
+  Eigen::MatrixXf quad(2, 6);
+  quad.col(0)<<-1.0, -1.0;
+  quad.col(1)<<+1.0, -1.0;
+  quad.col(2)<<+1.0, +1.0;
+  quad.col(3)<<-1.0, -1.0;
+  quad.col(4)<<+1.0, +1.0;
+  quad.col(5)<<-1.0, +1.0;
 
-  Eigen::MatrixXf texcoord(2, 6);
-  texcoord.col(0)<<-1.0, -1.0;
-  texcoord.col(1)<<+1.0, -1.0;
-  texcoord.col(2)<<+1.0, +1.0;
-  texcoord.col(3)<<-1.0, -1.0;
-  texcoord.col(4)<<+1.0, +1.0;
-  texcoord.col(5)<<-1.0, +1.0;
-  this->shader.uploadAttrib<Eigen::MatrixXf>("quad_uv", texcoord);
+  this->shader.bind();
+  this->shader.uploadAttrib<Eigen::MatrixXf>("quad_uv", quad);
+  this->shader.uploadAttrib<Eigen::MatrixXf>("quad_pos", quad);
 
   //preallocate buffers where we'll store the transformed,
   //clipped and culled vertices (triangles) before copying them to the GPU
@@ -45,13 +42,13 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
 
   //preallocate color and depth buffers with the
   //initial window size. this will once we resize the window!
-  buffer_height = this->height(); buffer_width = this->width();
-  int n_pixels = buffer_width * buffer_height;
-
-  color = new uchar[n_pixels];
-  depth = new float[n_pixels];
-
   glGenTextures(1, &color_gpu);
+
+  buffer_height = this->height(); buffer_width = this->width();
+  int n_pixels = 3 * buffer_width * buffer_height;
+
+  color = new uchar[n_pixels]; depth = new float[n_pixels];
+  for(int i = 0; i < n_pixels; ++i) color[i] = 255;
 }
 
 void AlmostGL::drawGL()
@@ -185,18 +182,18 @@ void AlmostGL::drawGL()
                GL_UNSIGNED_BYTE,
                color);
 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
   //-- we unfortunately need to use uploadAttrib which will call glBufferData
   //-- under the hood. Using glBufferSubData() won't work.
   this->shader.bind();
   Eigen::MatrixXf to_gpu = Eigen::Map<Eigen::MatrixXf>(culled, 2, n_culled);
-  this->shader.uploadAttrib<Eigen::MatrixXf>("pos", to_gpu);
-  this->shader.setUniform("model_color", param.model_color);
   this->shader.setUniform("frame", 0);
 
   //draw stuff
-  glPolygonMode(GL_FRONT_AND_BACK, param.draw_mode);
-  this->shader.drawArray(GL_TRIANGLES, 0, this->model.mPos.cols());
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  this->shader.drawArray(GL_TRIANGLES, 0, this->model.mPos.cols());
 
   //compute time
   t = clock() - t;
