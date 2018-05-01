@@ -195,14 +195,19 @@ void AlmostGL::drawGL()
 
    for(int p_id = 0; p_id < culled_last; p_id += 6)
    {
+     #define ROUND(x) ((int)(x + 0.5f))
+     #define FLOOR(x) ((int)x)
+     #define CEIL(x)  ((int)(x+0.9999f))
+     #define EQ(x,y)  (std::fabs(x-y) < 0.001f)
+
      //apply viewport transformation to each vertex
      vec4 v0_ = viewport*vec4(culled[p_id+0], culled[p_id+1], 1.0f, 1.0f);
      vec4 v1_ = viewport*vec4(culled[p_id+2], culled[p_id+3], 1.0f, 1.0f);
      vec4 v2_ = viewport*vec4(culled[p_id+4], culled[p_id+5], 1.0f, 1.0f);
 
-     vec2 v0(v0_(0), v0_(1));
-     vec2 v1(v1_(0), v1_(1));
-     vec2 v2(v2_(0), v2_(1));
+     vec2 v0( ROUND(v0_(0)),  ROUND(v0_(1)));
+     vec2 v1( ROUND(v1_(0)),  ROUND(v1_(1)));
+     vec2 v2( ROUND(v2_(0)),  ROUND(v2_(1)));
 
      //order triangles by y coordinate
      #define SWAP(a,b) { vec2 aux = b; b = a; a = aux; }
@@ -210,20 +215,16 @@ void AlmostGL::drawGL()
      if( v0(1) > v2(1) ) SWAP(v0, v2);
      if( v1(1) > v2(1) ) SWAP(v1, v2);
 
-     #define ROUND(x) ((int)(x + 0.5f))
      //loop from v0 to the vertex in the middle,
      //drawing the first "half" of the triangle
-     float start = v0(0), end = v0(0);
-
      float e0dx = (v1(0)-v0(0))/(v1(1)-v0(1));
      float e1dx = (v2(0)-v0(0))/(v2(1)-v0(1));
+     float e2dx = (v2(0)-v1(0))/(v2(1)-v1(1));
      float start_dx, end_dx;
 
-     //TODO: find a more compact expression for this
-     /*
-     if(v1(0) == v2(0))
+     if( EQ(v1(0),v2(0)) )
      {
-       if(v1(0) < v0(0))
+       if( v1(0) < v0(0) )
        {
          start_dx = e0dx;
          end_dx = e1dx;
@@ -243,51 +244,43 @@ void AlmostGL::drawGL()
      {
        start_dx = e1dx;
        end_dx = e0dx;
-     } */
-     if(v1(0) < v2(0))
-     {
-       start_dx = e0dx;
-       end_dx = e1dx;
-     }
-     else if(v1(0) > v2(0))
-     {
-       start_dx = e1dx;
-       end_dx = e0dx;
      }
 
-     /*
-     for(int y = ROUND(v0(1)); y < ROUND(v1(1)); ++y)
+     float start, end;
+     if( !EQ(v0(1), v1(1)) )
      {
-       for(int x = ROUND(start); x < ROUND(end); ++x)
-         SET_PIXEL(y, x, 255, 255, 255);
-       start += start_dx; end += end_dx;
+       start = v0(0);
+       end = v0(0);
+     }
+     else
+     {
+       if( v0(0) < v1(0) )
+       {
+         start = v0(0);
+         end = v1(0);
+         end_dx = e2dx;
+       }
+       else
+       {
+         start = v1(0);
+         end = v0(0);
+         start_dx = e2dx;
+       }
      }
 
-     //loop over second half
-     float e2dx = (v2(0)-v1(0))/(v2(1)-v1(1));
-     if(v1(0) < v2(0)) start_dx = e2dx;
-     else end_dx = e2dx;
-
-     for(int y = ROUND(v1(1)); y < ROUND(v2(1)); ++y)
-     {
-       for(int x = ROUND(start); x < ROUND(end); ++x)
-         SET_PIXEL(y, x, 255, 255, 255);
-       start += start_dx; end += end_dx;
-     } */
-
-     for(int y = ROUND(v0(1)); y < ROUND(v2(1)); ++y)
+     for(int y = FLOOR(v0(1)); y <= CEIL(v2(1)); ++y)
      {
        //rasterize scanline
-       for(int x = ROUND(start); x < ROUND(end); ++x)
+       for(int x = FLOOR(start); x <= CEIL(end); ++x)
          SET_PIXEL(y, x, 255, 255, 255);
 
        //switch active edge if we reached halfway the triangle
-       if( y == ROUND(v1(1)) )
+       if( y == CEIL(v1(1)) )
        {
          float dy_v2v1 = v2(1)-v1(1);
 
          //just ignore the last scanline if edge is horizontal
-         if(dy_v2v1 == 0.0f) break;
+         if( EQ(dy_v2v1, 0.0f) ) break;
 
          float e2dx = (v2(0)-v1(0))/dy_v2v1;
          if(v1(0) < v2(0)) start_dx = e2dx;
@@ -295,6 +288,7 @@ void AlmostGL::drawGL()
        }
 
        //compute increments for the next scanline bounds
+       printf("(%f, %f)\n", start_dx, end_dx);
        start += start_dx; end += end_dx;
      }
 
