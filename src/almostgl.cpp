@@ -205,9 +205,9 @@ void AlmostGL::drawGL()
      vec4 v1_ = viewport*vec4(culled[p_id+2], culled[p_id+3], 1.0f, 1.0f);
      vec4 v2_ = viewport*vec4(culled[p_id+4], culled[p_id+5], 1.0f, 1.0f);
 
-     vec2 v0( ROUND(v0_(0)),  ROUND(v0_(1)));
-     vec2 v1( ROUND(v1_(0)),  ROUND(v1_(1)));
-     vec2 v2( ROUND(v2_(0)),  ROUND(v2_(1)));
+     vec2 v0(ROUND(v0_(0)), ROUND(v0_(1)));
+     vec2 v1(ROUND(v1_(0)), ROUND(v1_(1)));
+     vec2 v2(ROUND(v2_(0)), ROUND(v2_(1)));
 
      //order triangles by y coordinate
      #define SWAP(a,b) { vec2 aux = b; b = a; a = aux; }
@@ -217,79 +217,88 @@ void AlmostGL::drawGL()
 
      //loop from v0 to the vertex in the middle,
      //drawing the first "half" of the triangle
-     float e0dx = (v1(0)-v0(0))/(v1(1)-v0(1));
-     float e1dx = (v2(0)-v0(0))/(v2(1)-v0(1));
-     float e2dx = (v2(0)-v1(0))/(v2(1)-v1(1));
-     float start_dx, end_dx;
-
-     if( EQ(v1(0),v2(0)) )
-     {
-       if( v1(0) < v0(0) )
-       {
-         start_dx = e0dx;
-         end_dx = e1dx;
-       }
-       else
-       {
-         start_dx = e1dx;
-         end_dx = e0dx;
-       }
-     }
-     else if(v1(0) < v2(0))
-     {
-       start_dx = e0dx;
-       end_dx = e1dx;
-     }
-     else if(v1(0) > v2(0))
-     {
-       start_dx = e1dx;
-       end_dx = e0dx;
-     }
-
+     float e0 = (v1(0)-v0(0))/(v1(1)-v0(1));
+     float e1 = (v2(0)-v0(0))/(v2(1)-v0(1));
+     float e2 = (v2(0)-v1(0))/(v2(1)-v1(1));
      float start, end;
-     if( !EQ(v0(1), v1(1)) )
+     float start_dx, end_dx;
+     float *next_active;
+
+     /*
+     if( v1(0) < v2(0) )
      {
-       start = v0(0);
-       end = v0(0);
+       start_dx = e0;
+       end_dx = e1;
+       next_active = &start_dx;
+     }
+     else if( v1(0) > v2(0) )
+     {
+       start_dx = e1;
+       end_dx = e0;
+       next_active = &end_dx;
      }
      else
      {
        if( v0(0) < v1(0) )
        {
-         start = v0(0);
-         end = v1(0);
-         end_dx = e2dx;
+         start_dx = e1;
+         end_dx = e0;
+         next_active = &end_dx;
        }
        else
        {
-         start = v1(0);
-         end = v0(0);
-         start_dx = e2dx;
+         start_dx = e0;
+         end_dx = e1;
+         next_active = &start_dx;
        }
+     } */
+
+     //bool right_side = (v1(0)-v0(0))*(v2(1)-v0(1))-(v1(1)*v0(1))*(v2(0)-v0(0)) > 0;
+     vec3 right_side = vec3(v1(0)-v0(0), v1(1)-v0(1), 0.0f).cross(vec3(v2(0)-v0(0), v2(1)-v0(1), 0.0f));
+
+     if( right_side(2) > 0 )
+     {
+       end_dx = e0;
+       start_dx = e1;
+       next_active = &end_dx;
+     }
+     else
+     {
+       end_dx = e1;
+       start_dx = e0;
+       next_active = &start_dx;
      }
 
-     for(int y = FLOOR(v0(1)); y <= CEIL(v2(1)); ++y)
+     if( v0(1) == v1(1) )
+     {
+       //TODO: rasterize first line?
+
+       //switch active edge and update
+       //starting and ending points
+       if( v0(0) < v1(0) )
+       {
+         end_dx = e2;
+         start = v0(0); end = v1(0);
+       }
+       else
+       {
+         start_dx = e2;
+         start = v1(0); end = v0(0);
+       }
+     }
+     else start = end = v0(0);
+
+     for(int y = v0(1); y < v2(1); ++y)
      {
        //rasterize scanline
-       for(int x = FLOOR(start); x <= CEIL(end); ++x)
+       for(int x = (int)start; x < (int)end; ++x)
          SET_PIXEL(y, x, 255, 255, 255);
 
-       //switch active edge if we reached halfway the triangle
-       if( y == CEIL(v1(1)) )
-       {
-         float dy_v2v1 = v2(1)-v1(1);
-
-         //just ignore the last scanline if edge is horizontal
-         if( EQ(dy_v2v1, 0.0f) ) break;
-
-         float e2dx = (v2(0)-v1(0))/dy_v2v1;
-         if(v1(0) < v2(0)) start_dx = e2dx;
-         else end_dx = e2dx;
-       }
-
-       //compute increments for the next scanline bounds
-       printf("(%f, %f)\n", start_dx, end_dx);
+       //increment bounds
        start += start_dx; end += end_dx;
+
+       //switch active edges if halfway through the triangle
+       if( y == (int)v1(1) ) *next_active = e2;
      }
 
    }
