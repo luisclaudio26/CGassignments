@@ -224,38 +224,15 @@ void AlmostGL::drawGL()
      float start_dx, end_dx;
      float *next_active;
 
-     /*
-     if( v1(0) < v2(0) )
-     {
-       start_dx = e0;
-       end_dx = e1;
-       next_active = &start_dx;
-     }
-     else if( v1(0) > v2(0) )
-     {
-       start_dx = e1;
-       end_dx = e0;
-       next_active = &end_dx;
-     }
-     else
-     {
-       if( v0(0) < v1(0) )
-       {
-         start_dx = e1;
-         end_dx = e0;
-         next_active = &end_dx;
-       }
-       else
-       {
-         start_dx = e0;
-         end_dx = e1;
-         next_active = &start_dx;
-       }
-     } */
-
-     //bool right_side = (v1(0)-v0(0))*(v2(1)-v0(1))-(v1(1)*v0(1))*(v2(0)-v0(0)) > 0;
+     //decide start/end edges. If v1 is to the left
+     //side of the edge connecting v0 and v2, then v0v1
+     //is the starting edge and v0v2 is the ending edge;
+     //if v1 is to the right, it is the contrary.
+     //the v0v1 edge will be substituted by the v1v2 edge
+     //when we reach the v1 vertex while scanlining, so we
+     //store which of the start/end edges we should replace
+     //with v1v2.
      vec3 right_side = vec3(v1(0)-v0(0), v1(1)-v0(1), 0.0f).cross(vec3(v2(0)-v0(0), v2(1)-v0(1), 0.0f));
-
      if( right_side(2) > 0 )
      {
        end_dx = e0;
@@ -269,10 +246,9 @@ void AlmostGL::drawGL()
        next_active = &start_dx;
      }
 
+     //handle flat top triangles
      if( v0(1) == v1(1) )
      {
-       //TODO: rasterize first line?
-
        //switch active edge and update
        //starting and ending points
        if( v0(0) < v1(0) )
@@ -288,19 +264,23 @@ void AlmostGL::drawGL()
      }
      else start = end = v0(0);
 
-     for(int y = v0(1); y < v2(1); ++y)
+     //loop over scanlines
+     for(int y = v0(1); y <= v2(1); ++y)
      {
        //rasterize scanline
-       for(int x = (int)start; x < (int)end; ++x)
+       for(int x = ROUND(start); x <= ROUND(end); ++x)
          SET_PIXEL(y, x, 255, 255, 255);
+
+       //switch active edges if halfway through the triangle
+       //This MUST be done before incrementing, otherwise
+       //once we reached v1 we would pass through it and
+       //start coming back only in the next step, causing
+       //the big "leaking" triangles!
+       if( y == (int)v1(1) ) *next_active = e2;
 
        //increment bounds
        start += start_dx; end += end_dx;
-
-       //switch active edges if halfway through the triangle
-       if( y == (int)v1(1) ) *next_active = e2;
      }
-
    }
 
   // send to GPU in texture unit 0
