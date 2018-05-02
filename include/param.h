@@ -15,7 +15,9 @@ struct Camera
 
 struct GlobalParameters
 {
+  //scene parameters
   Camera cam;
+  Eigen::Vector3f light;
 
   //model parameters
   Eigen::Vector3f model_color;

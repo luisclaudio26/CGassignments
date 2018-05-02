@@ -155,6 +155,9 @@ public:
     param.cam.FoVy = 45.0f, param.cam.FoVx = 45.0f;
     param.cam.lock_view = false;
 
+    //light position
+    param.light<<0.0f, 0.0f, 0.0f;
+
     //--------------------------------------
     //----------- Shader options -----------
     //--------------------------------------
@@ -323,7 +326,7 @@ public:
     mShader.setUniform("view", v);
     mShader.setUniform("proj", p);
     mShader.setUniform("eye", eye);
-    mShader.setUniform("light", Eigen::Vector3f(0.0f, 0.0f, 0.0f));
+    mShader.setUniform("light", param.light);
     mShader.setUniform("model_color", param.model_color);
     mShader.setUniform("shadeId", param.shading);
 
