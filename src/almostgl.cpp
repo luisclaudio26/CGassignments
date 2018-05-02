@@ -381,9 +381,18 @@ void AlmostGL::drawGL()
      for(int y = v0.y; y <= v2.y; ++y)
      {
        //rasterize scanline
-       for(int x = ROUND(start.x); x <= ROUND(end.x); ++x)
-         SET_PIXEL(y, x, 255, 255, 255);
+       int s = ROUND(start.x), e = ROUND(end.x);
+       Vertex dV_dx = (end - start)/(e - s);
+       Vertex f = start;
 
+       for(int x = s; x <= e; ++x)
+       {
+         int z = (int)( (1.0f - f.z)*0.5f * 255.0f);
+
+         SET_PIXEL(y, x, z, z, z);
+         f += dV_dx;
+       }
+       
        //switch active edges if halfway through the triangle
        //This MUST be done before incrementing, otherwise
        //once we reached v1 we would pass through it and
