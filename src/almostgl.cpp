@@ -43,12 +43,21 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   this->shader.uploadAttrib<Eigen::MatrixXf>("quad_pos", quad);
   this->shader.uploadAttrib<Eigen::MatrixXf>("quad_uv", texcoord);
 
+  //we need 7 floats per vertex (4 -> XYZW, 3 -> RGB)
+  //normals won't be forwarded out of vertex processing
+  //stage, so we don't need to store them in the vertex
+  //buffer
+  vertex_sz = 4 + 3;
+  n_vertices = model.mPos.cols();
+
   //preallocate buffers where we'll store the transformed,
-  //clipped and culled vertices (triangles) before copying them to the GPU
-  vbuffer = new float[model.mPos.cols()*4];
-  clipped = new float[model.mPos.cols()*4];
-  projected = new float[model.mPos.cols()*2];
-  culled = new float[model.mPos.cols()*2];
+  //clipped and culled vertices (triangles) before copying them to the GPU.
+  //Buffers size are extremely conservative so we don't need to manage
+  //memory in anyway, just allocate once and use it (no need for resizing)
+  vbuffer = new float[n_vertices*vertex_sz];
+  clipped = new float[n_vertices*vertex_sz];
+  projected = new float[n_vertices*vertex_sz];
+  culled = new float[n_vertices*vertex_sz];
 
   //preallocate color and depth buffers with the
   //initial window size. this will once we resize the window!
@@ -72,35 +81,61 @@ void AlmostGL::drawGL()
   clock_t t = clock();
 
   //convert params to use internal library
+  //TODO: we could precompute most of these calls
   vec3 eye = vec3(param.cam.eye[0], param.cam.eye[1], param.cam.eye[2]);
   vec3 up = vec3(param.cam.up[0], param.cam.up[1], param.cam.up[2]);
   vec3 right = vec3(param.cam.right[0], param.cam.right[1], param.cam.right[2]);
   vec3 look_dir = vec3(param.cam.look_dir[0],
                         param.cam.look_dir[1],
                         param.cam.look_dir[2]);
+  vec3 model_color = vec3(param.model_color(0),
+                          param.model_color(1),
+                          param.model_color(2));
+  vec4 light = vec4(param.light(0),
+                    param.light(1),
+                    param.light(2),
+                    1.0f);
 
   mat4 model2world;
   for(int i = 0; i < 4; ++i)
     for(int j = 0; j < 4; ++j)
       model2world(i,j) = param.model2world[j][i];
 
+  //-------------------------------------------------------
+  //------------------ GRAPHICAL PIPELINE -----------------
+  //-------------------------------------------------------
   //important matrices.
   //proj and viewport could be precomputed!
   mat4 view = mat4::view(eye, eye+look_dir, up);
   mat4 proj = mat4::perspective(param.cam.FoVy, param.cam.FoVx,
                                 param.cam.near, param.cam.far);
-  mat4 mvp = proj * view * model2world;
   mat4 viewport = mat4::viewport(buffer_width, buffer_height);
+  mat4 vp = proj * view;
 
-  //geometric transformations
-  for(int v_id = 0; v_id < model.mPos.cols(); ++v_id)
+  //vertex processing stage
+  for(int v_id = 0; v_id < n_vertices; ++v_id)
   {
     Eigen::Vector3f v = model.mPos.col(v_id);
-    vec4 v_ = mvp * vec4(v(0), v(1), v(2), 1.0f);
+    Eigen::Vector3f n = model.mNormal.col(v_id);
 
-    //copy to vbuffer
+    //transform vertices using model view proj.
+    //notice that this is akin to what we do in
+    //vertex shader.
+    vec4 v_world = model2world * vec4(v(0),v(1),v(2),1.0f);
+    vec4 n_world = vec4(n(0),n(1),n(2),0.0f); //TODO: use inv(trans(model2world))!
+    vec4 v_out = vp * v_world;
+
+    //compute color of this vertex using phong
+    //lighting model
+    vec4 v2l = (light - v_world).unit();
+    float diff = std::max(0.0f, v2l.dot(-n_world));
+    vec3 v_color = model_color * diff;
+
+    //copy to vbuffer -> forward to next stage
     for(int i = 0; i < 4; ++i)
-      vbuffer[4*v_id+i] = v_(i);
+      vbuffer[vertex_sz*v_id+i] = v_out(i);
+    for(int i = 0; i < 3; ++i)
+      vbuffer[vertex_sz*v_id+(4+i)] = v_color(i);
   }
 
   //primitive "clipping"
@@ -109,9 +144,11 @@ void AlmostGL::drawGL()
   //then this vertex is outside the view frustum. Although the correct
   //way of handling this would be to clip the triangle, we'll just
   //discard it entirely.
-  memset(clipped, 0, sizeof(float)*model.mPos.cols()*4);
+  //Notice that, at this moment, we're implicitly doing some sort of
+  //primitive assembly when we take vertices 3 by 3 to build a triangle
+  memset(clipped, 0, sizeof(float)*n_vertices*vertex_sz);
   int clipped_last = 0;
-  for(int t_id = 0; t_id < model.mPos.cols(); t_id += 3)
+  for(int t_id = 0; t_id < n_vertices; t_id += 3)
   {
     bool discard_tri = false;
 
@@ -119,7 +156,11 @@ void AlmostGL::drawGL()
     //is outside the view frustum, discard it
     for(int v_id = 0; v_id < 3; ++v_id)
     {
-      int v = 4*t_id + 4*v_id;
+      //triangle with index t_id (0, 3, 6, ...) starts at the position
+      //vertex_sz * t_id in the vbuffer. each vertex v_id of t_id starts
+      //at positions t_id+0, t_id+vertex_sz, t_id+2vertex_sz.
+      //XYZW in v_id are in +0, +1, +2, +3, RGB in +4,+5,+6
+      int v = vertex_sz*t_id + vertex_sz*v_id;
       float w = vbuffer[v+3];
 
       //near plane clipping
@@ -141,8 +182,10 @@ void AlmostGL::drawGL()
 
     if(!discard_tri)
     {
-      memcpy(&clipped[clipped_last], &vbuffer[4*t_id], 12*sizeof(float));
-      clipped_last += 12;
+      //Here we learn that it is always better name the constants vertex_sz
+      //and blablabla instead of just throwing 12's, 7's, 4's around =)
+      memcpy(&clipped[clipped_last], &vbuffer[vertex_sz*t_id], 3*vertex_sz*sizeof(float));
+      clipped_last += 3*vertex_sz;
     }
   }
 
@@ -192,7 +235,6 @@ void AlmostGL::drawGL()
 
    //clear color buffer
    memset((void*)color, 0, (4*buffer_width*buffer_height)*sizeof(GLubyte));
-
    for(int p_id = 0; p_id < culled_last; p_id += 6)
    {
      #define ROUND(x) ((int)(x + 0.5f))
@@ -222,6 +264,12 @@ void AlmostGL::drawGL()
      float e2 = (v2(0)-v1(0))/(v2(1)-v1(1));
      float start, end;
      float start_dx, end_dx;
+
+     //TODO: add edges for z position and vertex color
+
+     //TODO: transform this into a boolean so we can use
+     //the same next_active in all edges (we'll need edges
+     //for z position and vertex color also)
      float *next_active;
 
      //decide start/end edges. If v1 is to the left
@@ -283,6 +331,9 @@ void AlmostGL::drawGL()
      }
    }
 
+  //-------------------------------------------------------
+  //---------------------- DISPLAY ------------------------
+  //-------------------------------------------------------
   // send to GPU in texture unit 0
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, color_gpu);
@@ -305,8 +356,6 @@ void AlmostGL::drawGL()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-  //-- we unfortunately need to use uploadAttrib which will call glBufferData
-  //-- under the hood. Using glBufferSubData() won't work.
   this->shader.bind();
   this->shader.setUniform("frame", 0);
 

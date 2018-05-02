@@ -19,6 +19,7 @@ private:
   Mesh model;
 
   //vertex buffers
+  int n_vertices, vertex_sz;
   float *vbuffer, *clipped, *culled, *projected;
 
   //pixel buffers

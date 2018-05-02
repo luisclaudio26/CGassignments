@@ -34,6 +34,7 @@ public:
   vec3 operator+(const vec3& rhs) const;
   vec3 operator-() const;
   vec3 operator-(const vec3& rhs) const;
+  vec3 operator*(float k) const;
   vec3 cross(const vec3& rhs) const;
   float dot(const vec3& rhs) const;
   vec3 unit() const;
@@ -46,6 +47,7 @@ private:
 
 public:
   vec4();
+  vec4(const vec3& v, float w);
   vec4(float x, float y, float z, float w);
 
   float operator()(int i) const;
@@ -53,6 +55,7 @@ public:
 
   vec4 operator+(const vec4& rhs) const;
   vec4 operator-() const;
+  vec4 operator-(const vec4& rhs) const;
   float dot(const vec4& rhs) const;
   vec4 cross(const vec4& rhs) const;
   vec4 unit() const;

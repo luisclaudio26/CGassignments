@@ -49,6 +49,10 @@ vec3 vec3::operator-(const vec3& rhs) const
 {
   return (*this) + (-rhs);
 }
+vec3 vec3::operator*(float k) const
+{
+  return vec3(e[0]*k, e[1]*k, e[2]*k);
+}
 
 //---------------------------------
 //-------------- vec4 -------------
@@ -56,6 +60,13 @@ vec3 vec3::operator-(const vec3& rhs) const
 vec4::vec4()
 {
   for(int i = 0; i < 4; ++i) e[i] = 0.0f;
+}
+
+vec4::vec4(const vec3& v, float w)
+{
+  for(int i = 0; i < 3; ++i)
+    e[i] = v(i);
+  e[3] = w;
 }
 
 vec4::vec4(float x, float y, float z, float w)
@@ -84,6 +95,11 @@ vec4 vec4::operator+(const vec4& rhs) const
 vec4 vec4::operator-() const
 {
   return vec4(-e[0], -e[1], -e[2], -e[3]);
+}
+
+vec4 vec4::operator-(const vec4& rhs) const
+{
+  return (*this) + (-rhs);
 }
 
 float vec4::dot(const vec4& rhs) const
