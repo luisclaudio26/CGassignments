@@ -393,6 +393,8 @@ void AlmostGL::drawGL()
 
        for(int x = s; x <= e; ++x)
        {
+         if(x != s && x != e) continue;
+         
          if( f.z < depth[y*buffer_width+x] )
          {
            depth[y*buffer_width+x] = f.z;
