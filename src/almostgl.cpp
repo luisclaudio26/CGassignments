@@ -125,12 +125,16 @@ void AlmostGL::drawGL()
     vec4 n_world = vec4(n(0),n(1),n(2),0.0f); //TODO: use inv(trans(model2world))!
     vec4 v_out = vp * v_world;
 
-    //compute color of this vertex using phong
-    //lighting model
+    //compute color of this vertex using phong lighting model
     vec4 v2l = (light - v_world).unit();
+    vec4 v2e = (vec4(eye, 1.0f) - v_world).unit();
+    vec4 h = (v2l+v2e).unit();
+
     float diff = std::max(0.0f, v2l.dot(-n_world));
-    //vec3 v_color = model_color * diff;
-    vec3 v_color = model_color;
+    float spec = std::max(0.0f, (float)pow(h.dot(-n_world), 15.0f));
+    float amb = 0.2f;
+
+    vec3 v_color = model_color * (amb + diff) + vec3(1.0f, 1.0f, 1.0f) * spec;
 
     //copy to vbuffer -> forward to next stage
     for(int i = 0; i < 4; ++i)
@@ -242,8 +246,10 @@ void AlmostGL::drawGL()
                                  color[PIXEL(i,j)+2] = b; \
                                  color[PIXEL(i,j)+3] = 255;}
 
-   //clear color buffer
+   //clear color and depth buffers
    memset((void*)color, 0, (4*buffer_width*buffer_height)*sizeof(GLubyte));
+   for(int i = 0; i < buffer_width*buffer_height; ++i) depth[i] = 2.0f;
+
    for(int p_id = 0; p_id < culled_last; p_id += 3*vertex_sz)
    {
      #define ROUND(x) ((int)(x + 0.5f))
@@ -387,12 +393,20 @@ void AlmostGL::drawGL()
 
        for(int x = s; x <= e; ++x)
        {
-         int z = (int)( (1.0f - f.z)*0.5f * 255.0f);
+         if( f.z < depth[y*buffer_width+x] )
+         {
+           depth[y*buffer_width+x] = f.z;
 
-         SET_PIXEL(y, x, z, z, z);
+           int R = std::min(255, (int)(f.color(0)*255.0f));
+           int G = std::min(255, (int)(f.color(1)*255.0f));
+           int B = std::min(255, (int)(f.color(2)*255.0f));
+
+           SET_PIXEL(y, x, R, G, B);
+         }
+
          f += dV_dx;
        }
-       
+
        //switch active edges if halfway through the triangle
        //This MUST be done before incrementing, otherwise
        //once we reached v1 we would pass through it and
