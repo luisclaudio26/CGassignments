@@ -129,7 +129,8 @@ void AlmostGL::drawGL()
     //lighting model
     vec4 v2l = (light - v_world).unit();
     float diff = std::max(0.0f, v2l.dot(-n_world));
-    vec3 v_color = model_color * diff;
+    //vec3 v_color = model_color * diff;
+    vec3 v_color = model_color;
 
     //copy to vbuffer -> forward to next stage
     for(int i = 0; i < 4; ++i)
@@ -148,7 +149,7 @@ void AlmostGL::drawGL()
   //primitive assembly when we take vertices 3 by 3 to build a triangle
   memset(clipped, 0, sizeof(float)*n_vertices*vertex_sz);
   int clipped_last = 0;
-  for(int t_id = 0; t_id < n_vertices; t_id += 3)
+  for(int p_id = 0; p_id < n_vertices*vertex_sz; p_id += 3*vertex_sz)
   {
     bool discard_tri = false;
 
@@ -156,11 +157,11 @@ void AlmostGL::drawGL()
     //is outside the view frustum, discard it
     for(int v_id = 0; v_id < 3; ++v_id)
     {
-      //triangle with index t_id (0, 3, 6, ...) starts at the position
-      //vertex_sz * t_id in the vbuffer. each vertex v_id of t_id starts
-      //at positions t_id+0, t_id+vertex_sz, t_id+2vertex_sz.
+      //triangle with index p_id (0, 3, 6, ...) starts at the position
+      //vertex_sz * p_id in the vbuffer. each vertex v_id of p_id starts
+      //at positions p_id+0, p_id+vertex_sz, p_id+2vertex_sz.
       //XYZW in v_id are in +0, +1, +2, +3, RGB in +4,+5,+6
-      int v = vertex_sz*t_id + vertex_sz*v_id;
+      int v = p_id + vertex_sz*v_id;
       float w = vbuffer[v+3];
 
       //near plane clipping
@@ -184,32 +185,40 @@ void AlmostGL::drawGL()
     {
       //Here we learn that it is always better name the constants vertex_sz
       //and blablabla instead of just throwing 12's, 7's, 4's around =)
-      memcpy(&clipped[clipped_last], &vbuffer[vertex_sz*t_id], 3*vertex_sz*sizeof(float));
+      memcpy(&clipped[clipped_last], &vbuffer[p_id], 3*vertex_sz*sizeof(float));
       clipped_last += 3*vertex_sz;
     }
   }
 
   //perspective division
   int projected_last = 0;
-  for(int v_id = 0; v_id < clipped_last; v_id += 4)
+  for(int v_id = 0; v_id < clipped_last; v_id += vertex_sz)
   {
-    float &x = projected[projected_last+0];
-    float &y = projected[projected_last+1];
-
     float w = clipped[v_id+3];
-    x = clipped[v_id+0]/w;
-    y = clipped[v_id+1]/w;
+    projected[projected_last+0] = clipped[v_id+0]/w;
+    projected[projected_last+1] = clipped[v_id+1]/w;
+    projected[projected_last+2] = clipped[v_id+2]/w;
+    projected[projected_last+3] = 1.0f;
+    projected[projected_last+4] = clipped[v_id+4];
+    projected[projected_last+5] = clipped[v_id+5];
+    projected[projected_last+6] = clipped[v_id+6];
 
-    projected_last += 2;
+    //we'll still keep all the 7 floats for simplicity!
+    projected_last += vertex_sz;
   }
 
   //triangle culling
   int culled_last = 0;
-  for(int v_id = 0; v_id < projected_last; v_id += 6)
+  for(int p_id = 0; p_id < projected_last; p_id += 3*vertex_sz)
   {
-    vec3 v0(projected[v_id+0], projected[v_id+1], 1.0f);
-    vec3 v1(projected[v_id+2], projected[v_id+3], 1.0f);
-    vec3 v2(projected[v_id+4], projected[v_id+5], 1.0f);
+    //Data layout per vertex inside _projected_ is:
+    //... X1 Y1 Z1 W1 R1 G1 B1 X2 Y2 Z2 W2 R2 G2 B2 X3 Y3 Z3 W3 R3 G3 B3 ...
+    //
+    //TODO: we could guarantee optimization by using an incrementer instead of
+    //computing products vertex_sz*i, but maybe the compiler already does this
+    vec3 v0(projected[p_id+vertex_sz*0+0], projected[p_id+vertex_sz*0+1], 1.0f);
+    vec3 v1(projected[p_id+vertex_sz*1+0], projected[p_id+vertex_sz*1+1], 1.0f);
+    vec3 v2(projected[p_id+vertex_sz*2+0], projected[p_id+vertex_sz*2+1], 1.0f);
 
     //compute cross product p = v0v1 X v0v2;
     //if p is pointing outside the screen, v0v1v2 are defined
@@ -222,8 +231,8 @@ void AlmostGL::drawGL()
         param.front_face == GL_CW && c(2) > 0) continue;
 
     //copy to final buffer
-    memcpy(&culled[culled_last], &projected[v_id], 6*sizeof(float));
-    culled_last += 6;
+    memcpy(&culled[culled_last], &projected[p_id], 3*vertex_sz*sizeof(float));
+    culled_last += 3*vertex_sz;
   }
 
   //rasterization
@@ -235,42 +244,98 @@ void AlmostGL::drawGL()
 
    //clear color buffer
    memset((void*)color, 0, (4*buffer_width*buffer_height)*sizeof(GLubyte));
-   for(int p_id = 0; p_id < culled_last; p_id += 6)
+   for(int p_id = 0; p_id < culled_last; p_id += 3*vertex_sz)
    {
      #define ROUND(x) ((int)(x + 0.5f))
-     #define FLOOR(x) ((int)x)
-     #define CEIL(x)  ((int)(x+0.9999f))
-     #define EQ(x,y)  (std::fabs(x-y) < 0.001f)
+     struct Vertex
+     {
+       float x, y;
+       vec3 color;
+       float z, w;
 
-     //apply viewport transformation to each vertex
-     vec4 v0_ = viewport*vec4(culled[p_id+0], culled[p_id+1], 1.0f, 1.0f);
-     vec4 v1_ = viewport*vec4(culled[p_id+2], culled[p_id+3], 1.0f, 1.0f);
-     vec4 v2_ = viewport*vec4(culled[p_id+4], culled[p_id+5], 1.0f, 1.0f);
+       Vertex() {}
 
-     vec2 v0(ROUND(v0_(0)), ROUND(v0_(1)));
-     vec2 v1(ROUND(v1_(0)), ROUND(v1_(1)));
-     vec2 v2(ROUND(v2_(0)), ROUND(v2_(1)));
+       Vertex(const float* v_packed, const mat4& vp)
+       {
+         //we need x and y positions mapped to the viewport and
+         //with integer coordinates, otherwise we'll have displacements
+         //for start and end which are huge when because of 0 < dy < 1;
+         //these cases must be treated as straight, horizontal lines.
+         vec4 pos = vp*vec4(v_packed[0], v_packed[1], 1.0f, 1.0f);
+         x = ROUND(pos(0)); y = ROUND(pos(1));
+         z = v_packed[2]; w = v_packed[3];
+         color = vec3(v_packed[4], v_packed[5], v_packed[6]);
+       }
 
-     //order triangles by y coordinate
-     #define SWAP(a,b) { vec2 aux = b; b = a; a = aux; }
-     if( v0(1) > v1(1) ) SWAP(v0, v1);
-     if( v0(1) > v2(1) ) SWAP(v0, v2);
-     if( v1(1) > v2(1) ) SWAP(v1, v2);
+       Vertex operator-(const Vertex& rhs)
+       {
+         Vertex out;
+         out.x = x - rhs.x;
+         out.y = y - rhs.y;
+         out.color = color - rhs.color;
+         out.z = z - rhs.z;
+         out.w = w - rhs.w; //TODO: not sure if I should do this
+         return out;
+       }
 
-     //loop from v0 to the vertex in the middle,
-     //drawing the first "half" of the triangle
-     float e0 = (v1(0)-v0(0))/(v1(1)-v0(1));
-     float e1 = (v2(0)-v0(0))/(v2(1)-v0(1));
-     float e2 = (v2(0)-v1(0))/(v2(1)-v1(1));
-     float start, end;
-     float start_dx, end_dx;
+       void operator+=(const Vertex& rhs)
+       {
+         x += rhs.x;
+         y += rhs.y;
+         color = color + rhs.color;
+         z += rhs.z;
+         w += rhs.w; //TODO: not sure if I should do this neither
+       }
 
-     //TODO: add edges for z position and vertex color
+       Vertex operator/(float k)
+       {
+         Vertex out;
+         out.x = x / k;
+         out.y = y / k;
+         out.color = color * (1.0f/k);
+         out.z = z / k;
+         out.w = w / k;
+         return out;
+       }
+     };
 
-     //TODO: transform this into a boolean so we can use
-     //the same next_active in all edges (we'll need edges
-     //for z position and vertex color also)
-     float *next_active;
+     //unpack vertex data into structs so we can
+     //easily interpolate/operate them.
+     Vertex v0(&culled[p_id+0*vertex_sz], viewport);
+     Vertex v1(&culled[p_id+1*vertex_sz], viewport);
+     Vertex v2(&culled[p_id+2*vertex_sz], viewport);
+
+     //order vertices by y coordinate
+     #define SWAP(a,b) { Vertex aux = b; b = a; a = aux; }
+     if( v0.y > v1.y ) SWAP(v0, v1);
+     if( v0.y > v2.y ) SWAP(v0, v2);
+     if( v1.y > v2.y ) SWAP(v1, v2);
+
+     //these dVdy_ variables define how much we must
+     //increment v when increasing one unit in y, so
+     //we can use this to compute the start and end
+     //boundaries for rasterization. Notice that not
+     //only this defines the actual x coordinate of the
+     //fragment in the scanline, but all the other
+     //attributes. Also, notice that y is integer and
+     //thus if we make dy0 = (v1.y-v0.y) steps in y, for intance,
+     //incrementing v0 with dVdy0 at each step, by the end of
+     //the dy steps we'll have:
+     //
+     // v0 + dy0 * dVdy0 = v0 + dy0*(v1-v0)/dy0 = v0 + v1 - v0 = v1
+     //
+     //which is exactly what we want, a linear interpolation
+     //between v0 and v1 with dy0 steps
+     Vertex dV_dy0 = (v1-v0)/(float)(v1.y-v0.y);
+     Vertex dV_dy1 = (v2-v0)/(float)(v2.y-v0.y);
+     Vertex dV_dy2 = (v2-v1)/(float)(v2.y-v1.y);
+     Vertex start, end;
+     Vertex dStart_dy, dEnd_dy;
+
+     //this will tell us whether we should change dStart_dy
+     //or dEnd_dy to the next active edge (dV_dy2) when we
+     //reach halfway the triangle
+     Vertex *next_active_edge;
 
      //decide start/end edges. If v1 is to the left
      //side of the edge connecting v0 and v2, then v0v1
@@ -280,43 +345,43 @@ void AlmostGL::drawGL()
      //when we reach the v1 vertex while scanlining, so we
      //store which of the start/end edges we should replace
      //with v1v2.
-     vec3 right_side = vec3(v1(0)-v0(0), v1(1)-v0(1), 0.0f).cross(vec3(v2(0)-v0(0), v2(1)-v0(1), 0.0f));
-     if( right_side(2) > 0 )
+     vec3 right_side = vec3(v1.x-v0.x, v1.y-v0.y, 0.0f).cross(vec3(v2.x-v0.x, v2.y-v0.y, 0.0f));
+     if( right_side(2) > 0.0f )
      {
-       end_dx = e0;
-       start_dx = e1;
-       next_active = &end_dx;
+       dEnd_dy = dV_dy0;
+       dStart_dy = dV_dy1;
+       next_active_edge = &dEnd_dy;
      }
      else
      {
-       end_dx = e1;
-       start_dx = e0;
-       next_active = &start_dx;
+       dEnd_dy = dV_dy1;
+       dStart_dy = dV_dy0;
+       next_active_edge = &dStart_dy;
      }
 
      //handle flat top triangles
-     if( v0(1) == v1(1) )
+     if( v0.y == v1.y )
      {
        //switch active edge and update
        //starting and ending points
-       if( v0(0) < v1(0) )
+       if( v0.x < v1.x )
        {
-         end_dx = e2;
-         start = v0(0); end = v1(0);
+         dEnd_dy = dV_dy2;
+         start = v0; end = v1;
        }
        else
        {
-         start_dx = e2;
-         start = v1(0); end = v0(0);
+         dStart_dy = dV_dy2;
+         start = v1; end = v0;
        }
      }
-     else start = end = v0(0);
+     else start = end = v0;
 
      //loop over scanlines
-     for(int y = v0(1); y <= v2(1); ++y)
+     for(int y = v0.y; y <= v2.y; ++y)
      {
        //rasterize scanline
-       for(int x = ROUND(start); x <= ROUND(end); ++x)
+       for(int x = ROUND(start.x); x <= ROUND(end.x); ++x)
          SET_PIXEL(y, x, 255, 255, 255);
 
        //switch active edges if halfway through the triangle
@@ -324,10 +389,10 @@ void AlmostGL::drawGL()
        //once we reached v1 we would pass through it and
        //start coming back only in the next step, causing
        //the big "leaking" triangles!
-       if( y == (int)v1(1) ) *next_active = e2;
+       if( y == (int)v1.y ) *next_active_edge = dV_dy2;
 
        //increment bounds
-       start += start_dx; end += end_dx;
+       start += dStart_dy; end += dEnd_dy;
      }
    }
 
@@ -338,8 +403,8 @@ void AlmostGL::drawGL()
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, color_gpu);
 
-  //WARNING: be careful with RGB pixel data as OpenGL
-  //expects 4-byte aligned data
+  //WARNING: be careful with RGB pixel data
+  //as OpenGL expects 4-byte aligned data
   //https://www.khronos.org/opengl/wiki/Common_Mistakes#Texture_upload_and_pixel_reads
   glPixelStorei(GL_UNPACK_LSB_FIRST, 0);
   glTexImage2D(GL_TEXTURE_2D,
