@@ -29,6 +29,9 @@ void main()
   vec3 v2e = normalize(eye - pos_worldspace);
   vec3 h = normalize(v2l+v2e);
 
+  //TODO: FOR SOME REASON, USING UNTRANSFORMED NORMALS
+  //GIVES US THE CORRECT RESULTS WHILE USING INV(TRANS(MODEL))
+  //GIVES WEIRD STUFF. WHY IS THIS?!
   float diff_k = max(0.0f, dot(-normal, v2l));
   float spec_k = max(0.0f, pow(dot(h, -normal), shininess));
 
@@ -38,5 +41,5 @@ void main()
   lerp_spec = vec3(1.0f) * spec_k;
   lerp_shininess = shininess;
   lerp_pos = pos_worldspace;
-  lerp_normal = (inverse(transpose(model))*vec4(-normal, 0.0)).xyz;
+  lerp_normal = -normal;
 }
