@@ -2,7 +2,7 @@
 
 OGL::OGL(GlobalParameters& param,
           const char* path,
-          Widget *parent) : nanogui::GLCanvas(parent), param(param)
+          Widget *parent) : nanogui::GLCanvas(parent), param(param), framerate(0.0f)
 {
   this->model.load_file(path);
 
@@ -26,6 +26,7 @@ OGL::OGL(GlobalParameters& param,
 void OGL::drawGL()
 {
   using namespace nanogui;
+  clock_t delta = clock();
 
   //uniform uploading
   glm::mat4 view = glm::lookAt(param.cam.eye,
@@ -68,4 +69,8 @@ void OGL::drawGL()
   //disable options
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glDisable(GL_DEPTH_TEST);
+
+  //compute time
+  delta = clock() - delta;
+  this->framerate = CLOCKS_PER_SEC/(float)delta;
 }
