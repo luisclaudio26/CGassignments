@@ -227,11 +227,10 @@ public:
 
     //preallocate color and depth buffers with the
     //initial window size. this will once we resize the window!
-    glGenTextures(1, &color_gpu);
-
     buffer_height = this->height(); buffer_width = this->width();
     int n_pixels = buffer_width * buffer_height;
 
+    //AlmostGL buffers
     color = new GLubyte[4*n_pixels];
     for(int i = 0; i < n_pixels*4; i += 4) color[i] = 0;
     for(int i = 1; i < n_pixels*4; i += 4) color[i] = 0;
@@ -239,6 +238,15 @@ public:
     for(int i = 3; i < n_pixels*4; i += 4) color[i] = 255;
 
     depth = new float[n_pixels];
+
+    //GPU target color buffer
+    glGenTextures(1, &color_gpu);
+    glBindTexture(GL_TEXTURE_2D, color_gpu);
+    glTexStorage2D(GL_TEXTURE_2D,
+                    1,
+                    GL_RGBA8,
+                    buffer_width,
+                    buffer_height);
   }
 
   virtual void draw(NVGcontext *ctx)
@@ -362,14 +370,18 @@ public:
 
   virtual bool resizeEvent(const Eigen::Vector2i &size) override
   {
-    //printf("%d x %d\n", size(0), size(1));
-
-    //TODO: delete previous texture and allocate a new one once we start
-    //using glTexSubImage2D
-    //glGenTextures(1, &color_gpu);
-
     buffer_height = this->height(); buffer_width = this->width();
     int n_pixels = buffer_width * buffer_height;
+
+    //delete previous texture and allocate a new one with the new size
+    glDeleteTextures(1, &color_gpu);
+    glGenTextures(1, &color_gpu);
+    glBindTexture(GL_TEXTURE_2D, color_gpu);
+    glTexStorage2D(GL_TEXTURE_2D,
+                    1,
+                    GL_RGBA8,
+                    buffer_width,
+                    buffer_height);
 
     //TODO: this is EXTREMELY slow! the best workaround would be
     //to use std::vector which is able to do some smart resizing,
@@ -761,15 +773,13 @@ public:
     //as OpenGL expects 4-byte aligned data
     //https://www.khronos.org/opengl/wiki/Common_Mistakes#Texture_upload_and_pixel_reads
     glPixelStorei(GL_UNPACK_LSB_FIRST, 0);
-    glTexImage2D(GL_TEXTURE_2D,
-                  0,
-                  GL_RGBA8,
-                  buffer_width,
-                  buffer_height,
-                  0,
-                  GL_RGBA,
-                  GL_UNSIGNED_BYTE,
-                  color);
+    glTexSubImage2D(GL_TEXTURE_2D,
+                    0, 0, 0,
+                    buffer_width,
+                    buffer_height,
+                    GL_RGBA,
+                    GL_UNSIGNED_BYTE,
+                    color);
 
     //WARNING: IF WE DON'T SET THIS IT WON'T WORK!
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
