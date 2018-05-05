@@ -19,7 +19,6 @@
 #include <nanogui/combobox.h>
 
 #include "../include/mesh.h"
-#include "../include/almostgl.h"
 #include "../include/ogl.h"
 #include "../include/param.h"
 #include "../include/matrix.h"
@@ -360,6 +359,28 @@ public:
     //---------------
 
     return false;
+  }
+
+  virtual bool resizeEvent(const Eigen::Vector2i &size) override
+  {
+    //printf("%d x %d\n", size(0), size(1));
+
+    //TODO: delete previous texture and allocate a new one once we start
+    //using glTexSubImage2D
+    //glGenTextures(1, &color_gpu);
+
+    buffer_height = this->height(); buffer_width = this->width();
+    int n_pixels = buffer_width * buffer_height;
+
+    //TODO: this is EXTREMELY slow! the best workaround would be
+    //to use std::vectors which are able to do some smart resizing,
+    //so they don't need to delete and realloc in case we make
+    //the image smaller
+    delete[] color;
+    color = new GLubyte[4*n_pixels];
+
+    delete[] depth;
+    depth = new float[n_pixels];
   }
 
   virtual void drawContents()
