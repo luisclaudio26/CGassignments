@@ -43,11 +43,14 @@ AlmostGL::AlmostGL(const GlobalParameters& param,
   this->shader.uploadAttrib<Eigen::MatrixXf>("quad_pos", quad);
   this->shader.uploadAttrib<Eigen::MatrixXf>("quad_uv", texcoord);
 
-  //we need 7 floats per vertex (4 -> XYZW, 3 -> RGB)
-  //normals won't be forwarded out of vertex processing
+  //we need 8 floats per vertex (4 -> XYZW, 3 -> RGB, 1 -> 1.0)
+  //Normals won't be forwarded out of vertex processing
   //stage, so we don't need to store them in the vertex
-  //buffer
-  vertex_sz = 4 + 3;
+  //buffer.
+  //The 1.0 attribute is used for storing the 1/w value
+  //we need to compute a perspectively correct interpolation
+  //of the fragments
+  vertex_sz = 4 + 4;
   n_vertices = model.mPos.cols();
 
   //preallocate buffers where we'll store the transformed,
@@ -137,10 +140,9 @@ void AlmostGL::drawGL()
     vec3 v_color = model_color * (amb + diff) + vec3(1.0f, 1.0f, 1.0f) * spec;
 
     //copy to vbuffer -> forward to next stage
-    for(int i = 0; i < 4; ++i)
-      vbuffer[vertex_sz*v_id+i] = v_out(i);
-    for(int i = 0; i < 3; ++i)
-      vbuffer[vertex_sz*v_id+(4+i)] = v_color(i);
+    for(int i = 0; i < 4; ++i) vbuffer[vertex_sz*v_id+i] = v_out(i);
+    for(int i = 0; i < 3; ++i) vbuffer[vertex_sz*v_id+(4+i)] = v_color(i);
+    vbuffer[vertex_sz*v_id+7] = 1.0f;
   }
 
   //primitive "clipping"
@@ -199,15 +201,17 @@ void AlmostGL::drawGL()
   for(int v_id = 0; v_id < clipped_last; v_id += vertex_sz)
   {
     float w = clipped[v_id+3];
+
     projected[projected_last+0] = clipped[v_id+0]/w;
     projected[projected_last+1] = clipped[v_id+1]/w;
     projected[projected_last+2] = clipped[v_id+2]/w;
     projected[projected_last+3] = 1.0f;
-    projected[projected_last+4] = clipped[v_id+4];
-    projected[projected_last+5] = clipped[v_id+5];
-    projected[projected_last+6] = clipped[v_id+6];
+    projected[projected_last+4] = clipped[v_id+4]/w;
+    projected[projected_last+5] = clipped[v_id+5]/w;
+    projected[projected_last+6] = clipped[v_id+6]/w;
+    projected[projected_last+7] = 1.0f/w;
 
-    //we'll still keep all the 7 floats for simplicity!
+    //we'll still keep all the 8 floats for simplicity!
     projected_last += vertex_sz;
   }
 
@@ -269,8 +273,8 @@ void AlmostGL::drawGL()
          //these cases must be treated as straight, horizontal lines.
          vec4 pos = vp*vec4(v_packed[0], v_packed[1], 1.0f, 1.0f);
          x = ROUND(pos(0)); y = ROUND(pos(1));
-         z = v_packed[2]; w = v_packed[3];
          color = vec3(v_packed[4], v_packed[5], v_packed[6]);
+         z = v_packed[2]; w = v_packed[7];
        }
 
        Vertex operator-(const Vertex& rhs)
@@ -393,15 +397,18 @@ void AlmostGL::drawGL()
 
        for(int x = s; x <= e; ++x)
        {
-         if(x != s && x != e) continue;
-         
+         //Draw edges only
+         //if(x != s && x != e) continue;
+
          if( f.z < depth[y*buffer_width+x] )
          {
            depth[y*buffer_width+x] = f.z;
 
-           int R = std::min(255, (int)(f.color(0)*255.0f));
-           int G = std::min(255, (int)(f.color(1)*255.0f));
-           int B = std::min(255, (int)(f.color(2)*255.0f));
+           vec3 c = f.color * (1.0f / f.w);
+
+           int R = std::min(255, (int)(c(0)*255.0f));
+           int G = std::min(255, (int)(c(1)*255.0f));
+           int B = std::min(255, (int)(c(2)*255.0f));
 
            SET_PIXEL(y, x, R, G, B);
          }
