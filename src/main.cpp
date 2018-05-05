@@ -20,6 +20,7 @@
 
 #include "../include/mesh.h"
 #include "../include/almostgl.h"
+#include "../include/ogl.h"
 #include "../include/param.h"
 #include "../include/matrix.h"
 
@@ -33,6 +34,7 @@ private:
   nanogui::GLShader mShader;
   Mesh mMesh;
   AlmostGL *mCanvas;
+  OGL *mOGL;
 
   nanogui::Label *framerate_open;
   nanogui::Label *framerate_almost;
@@ -133,6 +135,15 @@ public:
 
     mCanvas = new AlmostGL(param, path, winAlmostGL);
     mCanvas->setSize({480, 270});
+
+    Window *winOpenGL = new Window(this, "OpenGL");
+    winOpenGL->setSize({480, 270});
+    winOpenGL->setPosition(Eigen::Vector2i(50,50));
+    winOpenGL->setLayout(new GroupLayout());
+
+    mOGL = new OGL(param, path, winOpenGL);
+    mOGL->setSize({480, 270});
+
 
     performLayout();
 
