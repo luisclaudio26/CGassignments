@@ -154,8 +154,6 @@ public:
     mMesh.transform_to_center(param.model2world);
     param.model_color<<0.0f, 1.0f, 0.0f;
 
-    printf("%s\n", glm::to_string(param.model2world).c_str());
-
     param.cam.eye = glm::vec3(0.0f, 0.0f, 0.0f);
     param.cam.look_dir = glm::vec3(0.0f, 0.0f, -1.0f);
     param.cam.up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -168,7 +166,8 @@ public:
     //light position
     param.light<<0.0f, 0.0f, 0.0f;
 
-    //front faces are the counter-clockwise ones
+    //a front-facing triangle has
+    //counter-clockwisely ordered vertices
     param.front_face = GL_CCW;
 
     //draw as filled polygons
@@ -373,9 +372,9 @@ public:
     int n_pixels = buffer_width * buffer_height;
 
     //TODO: this is EXTREMELY slow! the best workaround would be
-    //to use std::vectors which are able to do some smart resizing,
-    //so they don't need to delete and realloc in case we make
-    //the image smaller
+    //to use std::vector which is able to do some smart resizing,
+    //so it doesn't need to copy data around in the case where
+    //we can just extend or shrink memory
     delete[] color;
     color = new GLubyte[4*n_pixels];
 
@@ -442,7 +441,22 @@ public:
       float spec = std::max(0.0f, (float)pow(h.dot(-n_world), 15.0f));
       float amb = 0.2f;
 
-      vec3 v_color = model_color * (amb + diff) + vec3(1.0f, 1.0f, 1.0f) * spec;
+      vec3 v_color;
+      switch(param.shading)
+      {
+        case 0:
+          v_color = model_color * (amb + diff);
+          break;
+        case 1:
+          v_color = model_color * (amb + diff) + vec3(1.0f, 1.0f, 1.0f) * spec;
+          break;
+        case 3:
+          v_color = model_color;
+          break;
+        default:
+          v_color = model_color * (amb + diff) + vec3(1.0f, 1.0f, 1.0f) * spec;
+          break;
+      }
 
       //copy to vbuffer -> forward to next stage
       for(int i = 0; i < 4; ++i) vbuffer[vertex_sz*v_id+i] = v_out(i);
@@ -702,8 +716,11 @@ public:
 
          for(int x = s; x <= e; ++x)
          {
-           //Draw edges only
-           //if(x != s && x != e) continue;
+           //in order to draw only the edges, we skip this
+           //the scanline rasterization in all points but
+           //the extremities
+           if(param.draw_mode == GL_LINE && (x != s && x != e))
+            continue;
 
            if( f.z < depth[y*buffer_width+x] )
            {
