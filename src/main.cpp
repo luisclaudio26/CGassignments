@@ -484,6 +484,8 @@ public:
     //discard it entirely.
     //Notice that, at this moment, we're implicitly doing some sort of
     //primitive assembly when we take vertices 3 by 3 to build a triangle
+    //TODO: To better reflect OpenGL architecture, clipping must happen
+    //after perspective division
     memset(clipped, 0, sizeof(float)*n_vertices*vertex_sz);
     int clipped_last = 0;
     for(int p_id = 0; p_id < n_vertices*vertex_sz; p_id += 3*vertex_sz)
@@ -547,6 +549,8 @@ public:
     }
 
     //triangle culling
+    //TODO: In OpenGL architecture, culling happens in the primitive
+    //assembly stage, which is the first part of rasterization
     int culled_last = 0;
     for(int p_id = 0; p_id < projected_last; p_id += 3*vertex_sz)
     {
@@ -642,6 +646,10 @@ public:
 
        //unpack vertex data into structs so we can
        //easily interpolate/operate them.
+       //TODO: To better reflect OpenGL structure, viewport
+       //transformation should be applied after perspective
+       //division and before triangle culling, which should
+       //happen in primitive assembly
        Vertex v0(&culled[p_id+0*vertex_sz], viewport);
        Vertex v1(&culled[p_id+1*vertex_sz], viewport);
        Vertex v2(&culled[p_id+2*vertex_sz], viewport);
@@ -667,9 +675,9 @@ public:
        //
        //which is exactly what we want, a linear interpolation
        //between v0 and v1 with dy0 steps
-       Vertex dV_dy0 = (v1-v0)/(float)(v1.y-v0.y);
-       Vertex dV_dy1 = (v2-v0)/(float)(v2.y-v0.y);
-       Vertex dV_dy2 = (v2-v1)/(float)(v2.y-v1.y);
+       Vertex dV_dy0 = (v1-v0)/(v1.y-v0.y);
+       Vertex dV_dy1 = (v2-v0)/(v2.y-v0.y);
+       Vertex dV_dy2 = (v2-v1)/(v2.y-v1.y);
        Vertex start, end;
        Vertex dStart_dy, dEnd_dy;
 
