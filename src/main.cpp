@@ -731,16 +731,42 @@ public:
            //in order to draw only the edges, we skip this
            //the scanline rasterization in all points but
            //the extremities
-           if(param.draw_mode == GL_LINE && (x != s && x != e))
-            continue;
+           if(param.draw_mode == GL_LINE && (x != s && x != e)) continue;
 
-           if( f.z < depth[y*buffer_width+x] )
+           // To better represent what the pipeline does, we should, in the
+           // following order:
+           //
+           // 1) perform early fragment tests at this point (which include
+           // depth buffering, scissor testing and stencil buffering, for
+           // for example), which decide whether this fragment will live
+           // or not. Notice that at this point, a fragment is the set of
+           // attributes interpolated by the rasterizer;
+           //
+           // 2) evaluate fragment shader to compute a pixel sample from the
+           // fragment's attributes;
+           //
+           // 3) perform per-sample operations like alpha
+           // blending using the sample computed in the previous stage;
+           //
+           // It is interesting to notice that, as of version 4.6, the OpenGL
+           // specification calls "per-fragment
+           // operations" both early fragment tests (which MAY be performed
+           // before or after fragment shader evaluation, but executing before
+           // allows us to discard fragments without evaluating them) and
+           // per-sample operations (like like alpha blending, dithering and
+           // sRGB conversions), which MUST be performed after fragment shader
+           // evaluation because we need a pixel sample.
+
+           // Here we mixed things in the same code for simplicity
+           if( f.z < depth[y*buffer_width+x] )  // early fragment tests
            {
-             depth[y*buffer_width+x] = f.z;
+             depth[y*buffer_width+x] = f.z;     // early fragment tests
 
-             vec3 c = f.color * (1.0f / f.w);
+             vec3 c = f.color * (1.0f / f.w);   // output of the rasterizer
 
-             int R = std::min(255, (int)(c(0)*255.0f));
+                                                // fragment shader comes here
+
+             int R = std::min(255, (int)(c(0)*255.0f)); // framebuffer writing
              int G = std::min(255, (int)(c(1)*255.0f));
              int B = std::min(255, (int)(c(2)*255.0f));
 
