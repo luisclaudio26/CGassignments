@@ -36,6 +36,7 @@ private:
 
   nanogui::Label *framerate_open;
   nanogui::Label *framerate_almost;
+  nanogui::Label *window_dimension;
 
   GlobalParameters param;
 
@@ -133,6 +134,7 @@ public:
                                 } });
 
     //display framerates
+    window_dimension = new Label(window, "dim");
     framerate_open = new Label(window, "framerate");
     framerate_almost = new Label(window, "framerate");
 
@@ -830,6 +832,8 @@ public:
     start = clock() - start;
     framerate_almost->setCaption( "AlmostGL: " + std::to_string(CLOCKS_PER_SEC/(float)start) );
     framerate_open->setCaption( "OpenGL: " + std::to_string(mOGL->framerate) );
+    window_dimension->setCaption(std::to_string(this->width())
+                                  + "x" + std::to_string(this->height()));
   }
 };
 
